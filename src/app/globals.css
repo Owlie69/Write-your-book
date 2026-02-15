@@ -1,0 +1,123 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #1a1a1a;
+  --color-bg-warm: #1e1c1a;
+  --color-bg-card: #2a2725;
+  --color-bg-card-hover: #332f2b;
+  --color-bg-input: #252220;
+  --color-text: #e8e0d6;
+  --color-text-muted: #9a918a;
+  --color-text-dim: #6b6460;
+  --color-accent: #c8a87c;
+  --color-accent-hover: #d4b88e;
+  --color-accent-dim: #8a7350;
+  --color-border: #3a3530;
+  --color-border-focus: #c8a87c;
+  --color-danger: #c75050;
+  --color-success: #5a9a5a;
+
+  --font-mono: "Courier New", "Courier", monospace;
+  --font-serif: "Georgia", "Times New Roman", serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-serif);
+}
+
+body {
+  min-height: 100vh;
+  background-color: var(--color-bg);
+}
+
+::selection {
+  background-color: var(--color-accent);
+  color: var(--color-bg);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-dim);
+}
+
+/* Writing editor specific */
+.writing-area {
+  caret-color: var(--color-accent);
+  line-height: 1.8;
+  letter-spacing: 0.02em;
+}
+
+.writing-area:focus {
+  outline: none;
+}
+
+.writing-area::placeholder {
+  color: var(--color-text-dim);
+  font-style: italic;
+}
+
+/* Typewriter cursor blink */
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.cursor-blink {
+  animation: blink 1s infinite;
+}
+
+/* Page texture overlay */
+.paper-texture {
+  background-image:
+    radial-gradient(ellipse at 20% 50%, rgba(200, 168, 124, 0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 50%, rgba(200, 168, 124, 0.02) 0%, transparent 50%);
+}
+
+/* Lock screen overlay */
+.lock-overlay {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Fade in */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* Pulse glow for timer */
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 5px rgba(200, 168, 124, 0.2); }
+  50% { box-shadow: 0 0 20px rgba(200, 168, 124, 0.4); }
+}
+
+.pulse-glow {
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+
+/* Text sizes for the editor */
+.text-size-small { font-size: 14px; }
+.text-size-medium { font-size: 18px; }
+.text-size-large { font-size: 22px; }
