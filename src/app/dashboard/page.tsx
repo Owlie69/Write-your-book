@@ -12,7 +12,19 @@ import {
   syncFiles,
   type WritingFile,
 } from "@/lib/storage";
-import { FREE_MAX_FILES, FREE_MAX_PAGES, PLANS } from "@/lib/constants";
+import { FREE_MAX_FILES, FREE_MAX_PAGES } from "@/lib/constants";
+
+function downloadFile(file: WritingFile) {
+  const blob = new Blob([file.content], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${file.title.replace(/[^a-zA-Z0-9\s-_]/g, "").trim() || "untitled"}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
 export default function DashboardPage() {
   const { user, plan, signOut } = useAuth();
@@ -207,6 +219,24 @@ export default function DashboardPage() {
                       >
                         Write
                       </Link>
+                      {plan !== "free" ? (
+                        <button
+                          onClick={() => downloadFile(file)}
+                          className="border border-border px-3 py-2 rounded font-mono text-xs text-text-muted hover:border-accent hover:text-accent transition-colors"
+                          title="Download as .txt"
+                        >
+                          .txt
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {}}
+                          className="border border-border px-3 py-2 rounded font-mono text-xs text-text-dim cursor-not-allowed opacity-50"
+                          title="Upgrade to download files"
+                          disabled
+                        >
+                          .txt
+                        </button>
+                      )}
                       {deleteConfirm === file.id ? (
                         <div className="flex items-center gap-2">
                           <button

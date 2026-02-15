@@ -1,32 +1,37 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import Stripe from "stripe";
 
-// Stripe customer portal scaffold
+function getStripe(): Stripe | null {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key || key === "your-stripe-secret-key") return null;
+  return new Stripe(key);
+}
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   try {
-    if (!process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY === "your-stripe-secret-key") {
+    const stripe = getStripe();
+    if (!stripe) {
       return NextResponse.json(
         { error: "Stripe is not configured yet" },
         { status: 503 }
       );
     }
 
-    // When Stripe is configured:
-    /*
-    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    const { customerId } = await req.json();
+
+    if (!customerId) {
+      return NextResponse.json(
+        { error: "No customer ID provided" },
+        { status: 400 }
+      );
+    }
 
     const session = await stripe.billingPortal.sessions.create({
-      customer: customerId, // get from your database
-      return_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`,
+      customer: customerId,
+      return_url: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard`,
     });
 
     return NextResponse.json({ url: session.url });
-    */
-
-    return NextResponse.json(
-      { error: "Billing portal — Stripe not yet configured" },
-      { status: 503 }
-    );
   } catch (error) {
     console.error("Portal error:", error);
     return NextResponse.json(

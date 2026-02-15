@@ -1,43 +1,49 @@
 import { NextRequest, NextResponse } from "next/server";
+import Stripe from "stripe";
 
-// Stripe checkout scaffold
-// To activate: npm install stripe, then add your keys to .env.local
+function getStripe(): Stripe | null {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key || key === "your-stripe-secret-key") return null;
+  return new Stripe(key);
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const { plan } = await req.json();
-
-    // Check if Stripe is configured
-    if (!process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY === "your-stripe-secret-key") {
+    const stripe = getStripe();
+    if (!stripe) {
       return NextResponse.json(
         { error: "Stripe is not configured yet. Add your keys to .env.local" },
         { status: 503 }
       );
     }
 
-    // When Stripe is configured, uncomment and use:
-    /*
-    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    const { plan, userId } = await req.json();
 
-    const priceId = plan === 'cloud'
-      ? process.env.NEXT_PUBLIC_STRIPE_CLOUD_PRICE_ID
-      : process.env.NEXT_PUBLIC_STRIPE_DESKTOP_PRICE_ID;
+    const priceId =
+      plan === "cloud"
+        ? process.env.NEXT_PUBLIC_STRIPE_CLOUD_PRICE_ID
+        : process.env.NEXT_PUBLIC_STRIPE_DESKTOP_PRICE_ID;
+
+    if (!priceId) {
+      return NextResponse.json(
+        { error: "Price ID not configured for this plan" },
+        { status: 503 }
+      );
+    }
 
     const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
-      payment_method_types: ['card'],
+      mode: "subscription",
+      payment_method_types: ["card"],
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/pricing`,
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard?checkout=success`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/#pricing`,
+      metadata: {
+        userId: userId || "",
+        plan,
+      },
     });
 
     return NextResponse.json({ url: session.url });
-    */
-
-    return NextResponse.json(
-      { error: `Checkout for ${plan} plan — Stripe not yet configured` },
-      { status: 503 }
-    );
   } catch (error) {
     console.error("Checkout error:", error);
     return NextResponse.json(

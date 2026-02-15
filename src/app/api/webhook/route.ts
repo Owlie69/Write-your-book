@@ -1,11 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
+import Stripe from "stripe";
+import { createClient } from "@supabase/supabase-js";
 
-// Stripe webhook scaffold
-// This endpoint handles subscription events from Stripe
+function getStripe(): Stripe | null {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key || key === "your-stripe-secret-key") return null;
+  return new Stripe(key);
+}
+
+function getSupabaseAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key);
+}
 
 export async function POST(req: NextRequest) {
   try {
-    if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
+    const stripe = getStripe();
+    if (!stripe || !process.env.STRIPE_WEBHOOK_SECRET) {
       return NextResponse.json(
         { error: "Stripe webhooks not configured" },
         { status: 503 }
@@ -19,40 +32,73 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No signature" }, { status: 400 });
     }
 
-    // When Stripe is configured:
-    /*
-    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-
     const event = stripe.webhooks.constructEvent(
       body,
       signature,
       process.env.STRIPE_WEBHOOK_SECRET
     );
 
+    const supabaseAdmin = getSupabaseAdmin();
+
     switch (event.type) {
-      case 'checkout.session.completed': {
-        const session = event.data.object;
-        // Update user plan in Supabase
-        // const userId = session.metadata.userId;
-        // const plan = session.metadata.plan;
-        // await supabase.from('profiles').update({ plan }).eq('id', userId);
+      case "checkout.session.completed": {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const userId = session.metadata?.userId;
+        const plan = session.metadata?.plan;
+        const customerId = session.customer as string;
+
+        if (userId && plan && supabaseAdmin) {
+          await supabaseAdmin
+            .from("profiles")
+            .update({
+              plan,
+              stripe_customer_id: customerId,
+            })
+            .eq("id", userId);
+        }
         break;
       }
-      case 'customer.subscription.deleted': {
-        // Downgrade user to free
-        // const customerId = event.data.object.customer;
-        // Find user by customerId and set plan to 'free'
+
+      case "customer.subscription.deleted": {
+        const subscription = event.data.object as Stripe.Subscription;
+        const customerId = subscription.customer as string;
+
+        // Downgrade user back to free
+        if (supabaseAdmin) {
+          await supabaseAdmin
+            .from("profiles")
+            .update({ plan: "free" })
+            .eq("stripe_customer_id", customerId);
+        }
+        break;
+      }
+
+      case "customer.subscription.updated": {
+        const subscription = event.data.object as Stripe.Subscription;
+        const customerId = subscription.customer as string;
+
+        // If subscription is cancelled or unpaid, downgrade
+        if (
+          subscription.status === "canceled" ||
+          subscription.status === "unpaid"
+        ) {
+          if (supabaseAdmin) {
+            await supabaseAdmin
+              .from("profiles")
+              .update({ plan: "free" })
+              .eq("stripe_customer_id", customerId);
+          }
+        }
         break;
       }
     }
-    */
 
     return NextResponse.json({ received: true });
   } catch (error) {
     console.error("Webhook error:", error);
     return NextResponse.json(
       { error: "Webhook handler failed" },
-      { status: 500 }
+      { status: 400 }
     );
   }
 }

@@ -469,6 +469,31 @@ export default function WritePage() {
           >
             Write Again
           </button>
+          {plan !== "free" ? (
+            <button
+              onClick={() => {
+                const blob = new Blob([contentRef.current], { type: "text/plain;charset=utf-8" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `${file.title.replace(/[^a-zA-Z0-9\s\-_]/g, "").trim() || "untitled"}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+              }}
+              className="w-full border border-accent text-accent py-3 rounded font-mono text-sm hover:bg-accent hover:text-bg transition-colors"
+            >
+              Download as .txt
+            </button>
+          ) : (
+            <Link
+              href="/#pricing"
+              className="w-full border border-border py-3 rounded font-mono text-sm text-text-dim hover:border-accent hover:text-accent transition-colors block text-center"
+            >
+              Upgrade to Download Files
+            </Link>
+          )}
           <Link
             href="/dashboard"
             className="w-full border border-border py-3 rounded font-mono text-sm hover:border-accent hover:text-accent transition-colors block"

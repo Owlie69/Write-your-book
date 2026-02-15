@@ -38,14 +38,14 @@ export function saveLocalFiles(files: WritingFile[]): void {
 
 export function getLocalSettings(): AppSettings {
   if (typeof window === "undefined")
-    return { textSize: "medium", sessionMinutes: 30 };
+    return { textSize: "medium", sessionMinutes: 20 };
   try {
     const data = localStorage.getItem(LOCAL_SETTINGS_KEY);
     return data
       ? JSON.parse(data)
-      : { textSize: "medium", sessionMinutes: 30 };
+      : { textSize: "medium", sessionMinutes: 20 };
   } catch {
-    return { textSize: "medium", sessionMinutes: 30 };
+    return { textSize: "medium", sessionMinutes: 20 };
   }
 }
 

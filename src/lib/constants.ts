@@ -10,7 +10,7 @@ export const DESKTOP_MAX_PAGES = Infinity;
 export const CHARS_PER_PAGE = 3000;
 
 // Session defaults
-export const DEFAULT_SESSION_MINUTES = 30;
+export const DEFAULT_SESSION_MINUTES = 20;
 export const MIN_SESSION_MINUTES = 5;
 export const MAX_SESSION_MINUTES = 180;
 
@@ -26,7 +26,7 @@ export const PLANS = {
     features: [
       "2 writing files",
       "100 pages per file",
-      "30-minute focus sessions",
+      "20-minute focus sessions",
       "Local storage",
       "3 text sizes",
     ],
@@ -43,6 +43,7 @@ export const PLANS = {
       "Unlimited pages",
       "Custom session timer",
       "Cloud sync across devices",
+      "Download files as .txt",
       "Writing statistics",
       "3 text sizes",
     ],
@@ -56,6 +57,7 @@ export const PLANS = {
     maxPages: DESKTOP_MAX_PAGES,
     features: [
       "Everything in Cloud",
+      "Download files as .txt",
       "Desktop app with true focus mode",
       "Blocks all other apps during sessions",
       "System-level distraction blocking",
