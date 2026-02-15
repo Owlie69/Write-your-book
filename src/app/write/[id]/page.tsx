@@ -27,6 +27,18 @@ import {
 
 type EditorState = "setup" | "writing" | "done";
 
+interface SessionStats {
+  wordsAdded: number;
+  wordsErased: number;
+  netWords: number;
+  charsTyped: number;
+  charsDeleted: number;
+  peakWordCount: number;
+  totalPages: number;
+  durationMinutes: number;
+  wordsPerMinute: number;
+}
+
 export default function WritePage() {
   const params = useParams();
   const router = useRouter();
@@ -42,11 +54,28 @@ export default function WritePage() {
   const [sessionWordCount, setSessionWordCount] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [sessionStats, setSessionStats] = useState<SessionStats | null>(null);
+
+  // Next session scheduler
+  const [nextSessionDate, setNextSessionDate] = useState("");
+  const [nextSessionTime, setNextSessionTime] = useState("");
+  const [reminderSent, setReminderSent] = useState(false);
+  const [reminderSending, setReminderSending] = useState(false);
+  const [reminderError, setReminderError] = useState<string | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startWordCountRef = useRef(0);
   const contentRef = useRef("");
+
+  // Stats tracking refs
+  const totalWordsAddedRef = useRef(0);
+  const totalWordsErasedRef = useRef(0);
+  const totalCharsTypedRef = useRef(0);
+  const totalCharsDeletedRef = useRef(0);
+  const peakWordCountRef = useRef(0);
+  const prevContentLenRef = useRef(0);
+  const prevWordCountRef = useRef(0);
 
   // Load the file
   useEffect(() => {
@@ -55,9 +84,12 @@ export default function WritePage() {
     if (found) {
       setFile(found);
       contentRef.current = found.content;
+      prevContentLenRef.current = found.content.length;
       const wc = found.content.split(/\s+/).filter(Boolean).length;
       setWordCount(wc);
       startWordCountRef.current = wc;
+      prevWordCountRef.current = wc;
+      peakWordCountRef.current = wc;
     }
   }, [fileId]);
 
@@ -102,6 +134,36 @@ export default function WritePage() {
     return () => clearInterval(interval);
   }, [editorState, saveFile]);
 
+  // Finalize stats and move to done
+  const finishSession = useCallback(() => {
+    saveFile(contentRef.current);
+    const finalWc = contentRef.current.split(/\s+/).filter(Boolean).length;
+    const netWords = finalWc - startWordCountRef.current;
+    const actualMinutes = sessionMinutes - Math.floor(timeLeft / 60);
+    const wpm = actualMinutes > 0 ? Math.round(Math.max(0, totalWordsAddedRef.current) / actualMinutes) : 0;
+
+    setSessionStats({
+      wordsAdded: totalWordsAddedRef.current,
+      wordsErased: totalWordsErasedRef.current,
+      netWords,
+      charsTyped: totalCharsTypedRef.current,
+      charsDeleted: totalCharsDeletedRef.current,
+      peakWordCount: peakWordCountRef.current,
+      totalPages: calculatePageCount(contentRef.current),
+      durationMinutes: Math.max(1, actualMinutes),
+      wordsPerMinute: wpm,
+    });
+
+    // Pre-fill next session for tomorrow same time
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    setNextSessionDate(tomorrow.toISOString().split("T")[0]);
+    setNextSessionTime("09:00");
+
+    setEditorState("done");
+    exitFullscreen();
+  }, [saveFile, sessionMinutes, timeLeft]);
+
   // Timer
   useEffect(() => {
     if (editorState !== "writing") return;
@@ -109,11 +171,8 @@ export default function WritePage() {
     timerRef.current = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
-          // Time's up
           clearInterval(timerRef.current!);
-          saveFile(contentRef.current);
-          setEditorState("done");
-          exitFullscreen();
+          finishSession();
           return 0;
         }
         return prev - 1;
@@ -123,7 +182,7 @@ export default function WritePage() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [editorState, saveFile]);
+  }, [editorState, finishSession]);
 
   // Prevent leaving during session
   useEffect(() => {
@@ -137,16 +196,13 @@ export default function WritePage() {
     }
 
     function handleKeyDown(e: KeyboardEvent) {
-      // Block Escape during session
       if (e.key === "Escape") {
         e.preventDefault();
         e.stopPropagation();
       }
-      // Block Ctrl/Cmd+W (close tab)
       if ((e.ctrlKey || e.metaKey) && e.key === "w") {
         e.preventDefault();
       }
-      // Block Ctrl/Cmd+T (new tab)
       if ((e.ctrlKey || e.metaKey) && e.key === "t") {
         e.preventDefault();
       }
@@ -175,18 +231,29 @@ export default function WritePage() {
   }
 
   function startSession() {
-    // Save settings
     const newSettings = { ...settings, sessionMinutes };
     setSettings(newSettings);
     saveLocalSettings(newSettings);
 
+    // Reset stats
+    totalWordsAddedRef.current = 0;
+    totalWordsErasedRef.current = 0;
+    totalCharsTypedRef.current = 0;
+    totalCharsDeletedRef.current = 0;
+    prevContentLenRef.current = contentRef.current.length;
+    const wc = contentRef.current.split(/\s+/).filter(Boolean).length;
+    prevWordCountRef.current = wc;
+    startWordCountRef.current = wc;
+    peakWordCountRef.current = wc;
+
     setTimeLeft(sessionMinutes * 60);
-    startWordCountRef.current = wordCount;
     setSessionWordCount(0);
+    setSessionStats(null);
+    setReminderSent(false);
+    setReminderError(null);
     setEditorState("writing");
     enterFullscreen();
 
-    // Focus textarea after transition
     setTimeout(() => textareaRef.current?.focus(), 100);
   }
 
@@ -197,12 +264,34 @@ export default function WritePage() {
     if (plan === "free") {
       const pages = calculatePageCount(content);
       if (!canAddPages(pages, plan)) {
-        return; // Don't allow more content
+        return;
       }
     }
 
-    contentRef.current = content;
+    // Track character-level stats
+    const lenDiff = content.length - prevContentLenRef.current;
+    if (lenDiff > 0) {
+      totalCharsTypedRef.current += lenDiff;
+    } else if (lenDiff < 0) {
+      totalCharsDeletedRef.current += Math.abs(lenDiff);
+    }
+    prevContentLenRef.current = content.length;
+
+    // Track word-level stats
     const wc = content.split(/\s+/).filter(Boolean).length;
+    const wcDiff = wc - prevWordCountRef.current;
+    if (wcDiff > 0) {
+      totalWordsAddedRef.current += wcDiff;
+    } else if (wcDiff < 0) {
+      totalWordsErasedRef.current += Math.abs(wcDiff);
+    }
+    prevWordCountRef.current = wc;
+
+    if (wc > peakWordCountRef.current) {
+      peakWordCountRef.current = wc;
+    }
+
+    contentRef.current = content;
     setWordCount(wc);
     setSessionWordCount(wc - startWordCountRef.current);
   }
@@ -211,6 +300,43 @@ export default function WritePage() {
     const newSettings = { ...settings, textSize: size };
     setSettings(newSettings);
     saveLocalSettings(newSettings);
+  }
+
+  async function scheduleReminder() {
+    if (!nextSessionDate || !nextSessionTime) return;
+    if (!user?.email) {
+      setReminderError("Sign in to receive email reminders");
+      return;
+    }
+
+    setReminderSending(true);
+    setReminderError(null);
+
+    try {
+      const res = await fetch("/api/reminder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: user.email,
+          userId: user.id,
+          fileId: file?.id,
+          fileTitle: file?.title,
+          sessionDate: nextSessionDate,
+          sessionTime: nextSessionTime,
+        }),
+      });
+
+      if (res.ok) {
+        setReminderSent(true);
+      } else {
+        const data = await res.json();
+        setReminderError(data.error || "Failed to schedule reminder");
+      }
+    } catch {
+      setReminderError("Failed to schedule reminder");
+    } finally {
+      setReminderSending(false);
+    }
   }
 
   function formatTime(seconds: number): string {
@@ -428,38 +554,145 @@ export default function WritePage() {
   }
 
   // ---- SESSION DONE SCREEN ----
+  const stats = sessionStats;
+
   return (
-    <div className="min-h-screen bg-bg paper-texture flex items-center justify-center px-6">
-      <div className="w-full max-w-md text-center fade-in">
-        <div className="text-accent text-6xl mb-6">&#10003;</div>
+    <div className="min-h-screen bg-bg paper-texture flex items-center justify-center px-6 py-12">
+      <div className="w-full max-w-lg text-center fade-in">
+        <div className="text-accent text-6xl mb-4">&#10003;</div>
         <h1 className="font-mono text-2xl mb-2">Session Complete</h1>
         <p className="text-text-muted mb-8">
           You stayed locked in and wrote. That&apos;s what matters.
         </p>
 
-        <div className="border border-border rounded-lg p-6 bg-bg-card mb-8">
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <div className="font-mono text-2xl text-accent">
-                {sessionMinutes}
+        {/* Stats card */}
+        {stats && (
+          <div className="border border-border rounded-lg p-6 bg-bg-card mb-6">
+            <h2 className="font-mono text-sm text-text-muted mb-4 uppercase tracking-wider">
+              Your Session
+            </h2>
+            <div className="grid grid-cols-3 gap-4 mb-6">
+              <div>
+                <div className="font-mono text-2xl text-accent">{stats.durationMinutes}</div>
+                <div className="text-text-dim text-xs">minutes</div>
               </div>
-              <div className="text-text-dim text-xs">minutes</div>
+              <div>
+                <div className="font-mono text-2xl text-accent">+{Math.max(0, stats.netWords)}</div>
+                <div className="text-text-dim text-xs">net words</div>
+              </div>
+              <div>
+                <div className="font-mono text-2xl text-accent">{stats.totalPages}</div>
+                <div className="text-text-dim text-xs">total pages</div>
+              </div>
             </div>
-            <div>
-              <div className="font-mono text-2xl text-accent">
-                +{sessionWordCount}
+
+            <div className="border-t border-border pt-4 grid grid-cols-2 gap-3 text-left">
+              <div className="flex justify-between">
+                <span className="text-text-dim text-xs">Words added</span>
+                <span className="font-mono text-xs text-success">+{stats.wordsAdded}</span>
               </div>
-              <div className="text-text-dim text-xs">words written</div>
-            </div>
-            <div>
-              <div className="font-mono text-2xl text-accent">
-                {calculatePageCount(contentRef.current)}
+              <div className="flex justify-between">
+                <span className="text-text-dim text-xs">Words erased</span>
+                <span className="font-mono text-xs text-danger">-{stats.wordsErased}</span>
               </div>
-              <div className="text-text-dim text-xs">total pages</div>
+              <div className="flex justify-between">
+                <span className="text-text-dim text-xs">Chars typed</span>
+                <span className="font-mono text-xs text-text-muted">{stats.charsTyped.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-text-dim text-xs">Chars deleted</span>
+                <span className="font-mono text-xs text-text-muted">{stats.charsDeleted.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-text-dim text-xs">Words/min</span>
+                <span className="font-mono text-xs text-accent">{stats.wordsPerMinute}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-text-dim text-xs">Peak words</span>
+                <span className="font-mono text-xs text-text-muted">{stats.peakWordCount.toLocaleString()}</span>
+              </div>
             </div>
           </div>
+        )}
+
+        {/* Next session scheduler */}
+        <div className="border border-border rounded-lg p-6 bg-bg-card mb-6">
+          <h2 className="font-mono text-sm text-text-muted mb-1 uppercase tracking-wider">
+            Next Session
+          </h2>
+          <p className="text-text-dim text-xs mb-4">
+            Consistency is how books get finished. When&apos;s your next one?
+          </p>
+
+          {reminderSent ? (
+            <div className="py-4">
+              <div className="text-success text-2xl mb-2">&#10003;</div>
+              <p className="text-text-muted text-sm">
+                Reminder set! We&apos;ll email you the morning of{" "}
+                <span className="text-accent font-mono">
+                  {new Date(nextSessionDate + "T" + nextSessionTime).toLocaleDateString(undefined, {
+                    weekday: "long",
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </span>{" "}
+                at{" "}
+                <span className="text-accent font-mono">{nextSessionTime}</span>.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="flex gap-3 mb-3">
+                <div className="flex-1">
+                  <label className="block text-xs text-text-dim mb-1 text-left font-mono">Date</label>
+                  <input
+                    type="date"
+                    value={nextSessionDate}
+                    onChange={(e) => setNextSessionDate(e.target.value)}
+                    min={new Date().toISOString().split("T")[0]}
+                    className="w-full bg-bg-input border border-border rounded px-3 py-2 text-text font-mono text-sm focus:border-accent focus:outline-none transition-colors"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-xs text-text-dim mb-1 text-left font-mono">Time</label>
+                  <input
+                    type="time"
+                    value={nextSessionTime}
+                    onChange={(e) => setNextSessionTime(e.target.value)}
+                    className="w-full bg-bg-input border border-border rounded px-3 py-2 text-text font-mono text-sm focus:border-accent focus:outline-none transition-colors"
+                  />
+                </div>
+              </div>
+
+              {reminderError && (
+                <p className="text-danger text-xs font-mono mb-2">{reminderError}</p>
+              )}
+
+              <button
+                onClick={scheduleReminder}
+                disabled={!nextSessionDate || !nextSessionTime || reminderSending}
+                className="w-full border border-accent text-accent py-2.5 rounded font-mono text-sm hover:bg-accent hover:text-bg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {reminderSending
+                  ? "Scheduling..."
+                  : user?.email
+                  ? "Remind Me by Email"
+                  : "Sign In to Set Reminders"}
+              </button>
+
+              {!user && (
+                <p className="text-text-dim text-xs mt-2">
+                  <Link href="/auth/signin" className="text-accent hover:underline">
+                    Sign in
+                  </Link>{" "}
+                  to get email reminders for your next session.
+                </p>
+              )}
+            </>
+          )}
         </div>
 
+        {/* Action buttons */}
         <div className="flex flex-col gap-3">
           <button
             onClick={() => {
