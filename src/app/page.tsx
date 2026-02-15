@@ -137,12 +137,12 @@ export default function LandingPage() {
           Ship it.
         </h1>
         <p className="text-text-muted text-lg md:text-xl max-w-2xl mx-auto mb-4 leading-relaxed">
-          A distraction-free writing tool that locks you into focused sessions.
+          In a world designed to drain your attention, this is the tool that holds it.
           No AI writing for you. No fancy formatting. No excuses.
         </p>
         <p className="text-text-dim text-base max-w-xl mx-auto mb-10">
-          Just you, your thoughts, and a timer counting down.
-          Build the habit. Finish what you started.
+          Your ideas are your number one advantage. JustWrite locks you in so
+          you can finally get them out of your head and onto the page.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
@@ -170,7 +170,7 @@ export default function LandingPage() {
             {
               step: "01",
               title: "Set your timer",
-              desc: "Choose how long you want to lock in. 30 minutes is the default. Once you start, there's no going back.",
+              desc: "Choose how long you want to lock in. 20 minutes is the default. Once you start, there's no going back.",
             },
             {
               step: "02",
@@ -192,24 +192,69 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* The pitch */}
+      {/* Attention holder */}
+      <section className="px-6 md:px-12 py-20 max-w-4xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-12 items-center">
+          <div>
+            <h2 className="text-2xl md:text-3xl font-serif mb-6">
+              Every app fights for your attention.
+              <br />
+              <span className="text-accent">This one protects it.</span>
+            </h2>
+            <p className="text-text-muted leading-relaxed mb-4">
+              Social media, notifications, infinite feeds &mdash; the modern world is
+              an attention-draining machine. Your focus is being stolen every
+              single day.
+            </p>
+            <p className="text-text leading-relaxed font-medium">
+              JustWrite is an attention holder. It locks you in with your own
+              thoughts, blocks everything else out, and gives your ideas the
+              uninterrupted time they deserve.
+            </p>
+          </div>
+          <div className="border border-border rounded-lg p-8 bg-bg-card">
+            <div className="space-y-6">
+              <div className="flex items-start gap-4">
+                <div className="font-mono text-danger text-xl leading-none mt-1">&times;</div>
+                <div>
+                  <div className="font-mono text-sm mb-1 text-text-muted">Attention drainers</div>
+                  <p className="text-text-dim text-sm">Social media, notifications, infinite scroll, clickbait, autoplay videos</p>
+                </div>
+              </div>
+              <div className="border-t border-border" />
+              <div className="flex items-start gap-4">
+                <div className="font-mono text-accent text-xl leading-none mt-1">&#10003;</div>
+                <div>
+                  <div className="font-mono text-sm mb-1 text-text">JustWrite &mdash; Attention holder</div>
+                  <p className="text-text-muted text-sm">Fullscreen focus, blocked distractions, timed sessions, your ideas on the page</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Your ideas are your advantage */}
       <section className="px-6 md:px-12 py-20 max-w-3xl mx-auto text-center">
         <div className="border border-border rounded-lg p-8 md:p-12 bg-bg-card">
           <h2 className="text-2xl md:text-3xl font-serif mb-6">
-            You don&apos;t need AI to write your story.
+            Your ideas are your #1 advantage.
+            <br />
+            <span className="text-text-muted">Don&apos;t let them die in your head.</span>
           </h2>
           <p className="text-text-muted leading-relaxed mb-4">
             Everyone&apos;s got a book in them. A journal they keep meaning to start.
             A story that&apos;s been bouncing around their head for years.
+            The ideas are there. The words are there. What&apos;s missing is the space to get them out.
           </p>
           <p className="text-text-muted leading-relaxed mb-4">
-            The problem isn&apos;t talent. It&apos;s not ideas. It&apos;s distraction.
-            It&apos;s the browser tab calling your name. The notification that
-            pulls you away. The urge to &ldquo;research&rdquo; instead of writing.
+            You don&apos;t need AI to write your story. You don&apos;t need a
+            co-pilot. You need uninterrupted time with your own thoughts.
+            That&apos;s what makes your writing yours.
           </p>
           <p className="text-text leading-relaxed font-medium">
-            JustWrite removes all of that. Lock in, write, and build the habit
-            that finally gets your words out of your head and onto the page.
+            JustWrite removes every distraction, locks you in, and lets you
+            build the one habit that actually ships books: sitting down and writing.
           </p>
         </div>
       </section>
