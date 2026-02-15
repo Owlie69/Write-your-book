@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import { useTheme } from "@/lib/theme-context";
 import {
   getLocalFiles,
   saveLocalFiles,
@@ -39,10 +40,19 @@ interface SessionStats {
   wordsPerMinute: number;
 }
 
+// Dissuasive messages shown when user exits fullscreen
+const DISSUASIVE_MESSAGES = [
+  { title: "Wait — you were in the zone!", body: "Your best writing happens when you stay locked in. The timer is still running. Get back in there." },
+  { title: "Don't break the flow.", body: "Every great writer pushes through the urge to stop. You've got words left in you. Keep going." },
+  { title: "Your future self will thank you.", body: "Quitting now means starting over tomorrow with less momentum. Stay in the session." },
+  { title: "The resistance is lying to you.", body: "That voice telling you to stop? It's the same one that's kept your book unfinished. Ignore it. Write." },
+];
+
 export default function WritePage() {
   const params = useParams();
   const router = useRouter();
   const { user, plan } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const fileId = params.id as string;
 
   const [file, setFile] = useState<WritingFile | null>(null);
@@ -55,6 +65,8 @@ export default function WritePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [sessionStats, setSessionStats] = useState<SessionStats | null>(null);
+  const [showDissuasive, setShowDissuasive] = useState(false);
+  const [dissuasiveMsg, setDissuasiveMsg] = useState(DISSUASIVE_MESSAGES[0]);
 
   // Next session scheduler
   const [nextSessionDate, setNextSessionDate] = useState("");
@@ -111,7 +123,6 @@ export default function WritePage() {
         saveLocalFiles(files);
         setFile(files[idx]);
 
-        // Cloud sync if user is signed in with cloud plan
         if (user && (plan === "cloud" || plan === "desktop")) {
           await saveCloudFile(user.id, files[idx]);
         }
@@ -154,7 +165,6 @@ export default function WritePage() {
       wordsPerMinute: wpm,
     });
 
-    // Pre-fill next session for tomorrow same time
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     setNextSessionDate(tomorrow.toISOString().split("T")[0]);
@@ -183,6 +193,22 @@ export default function WritePage() {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [editorState, finishSession]);
+
+  // Detect fullscreen exit during writing — show dissuasive overlay
+  useEffect(() => {
+    if (editorState !== "writing") return;
+
+    function handleFullscreenChange() {
+      if (!document.fullscreenElement && editorState === "writing") {
+        const msg = DISSUASIVE_MESSAGES[Math.floor(Math.random() * DISSUASIVE_MESSAGES.length)];
+        setDissuasiveMsg(msg);
+        setShowDissuasive(true);
+      }
+    }
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, [editorState]);
 
   // Prevent leaving during session
   useEffect(() => {
@@ -230,12 +256,22 @@ export default function WritePage() {
     }
   }
 
+  function handleGoBackToWriting() {
+    setShowDissuasive(false);
+    enterFullscreen();
+    setTimeout(() => textareaRef.current?.focus(), 100);
+  }
+
+  function handleContinueWithoutFullscreen() {
+    setShowDissuasive(false);
+    setTimeout(() => textareaRef.current?.focus(), 100);
+  }
+
   function startSession() {
     const newSettings = { ...settings, sessionMinutes };
     setSettings(newSettings);
     saveLocalSettings(newSettings);
 
-    // Reset stats
     totalWordsAddedRef.current = 0;
     totalWordsErasedRef.current = 0;
     totalCharsTypedRef.current = 0;
@@ -251,6 +287,7 @@ export default function WritePage() {
     setSessionStats(null);
     setReminderSent(false);
     setReminderError(null);
+    setShowDissuasive(false);
     setEditorState("writing");
     enterFullscreen();
 
@@ -260,7 +297,6 @@ export default function WritePage() {
   function handleContentChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     const content = e.target.value;
 
-    // Check page limit for free users
     if (plan === "free") {
       const pages = calculatePageCount(content);
       if (!canAddPages(pages, plan)) {
@@ -268,7 +304,6 @@ export default function WritePage() {
       }
     }
 
-    // Track character-level stats
     const lenDiff = content.length - prevContentLenRef.current;
     if (lenDiff > 0) {
       totalCharsTypedRef.current += lenDiff;
@@ -277,7 +312,6 @@ export default function WritePage() {
     }
     prevContentLenRef.current = content.length;
 
-    // Track word-level stats
     const wc = content.split(/\s+/).filter(Boolean).length;
     const wcDiff = wc - prevWordCountRef.current;
     if (wcDiff > 0) {
@@ -368,17 +402,26 @@ export default function WritePage() {
     return (
       <div className="min-h-screen bg-bg paper-texture flex items-center justify-center px-6">
         <div className="w-full max-w-md text-center fade-in">
-          <Link href="/dashboard" className="text-text-dim hover:text-text-muted text-sm font-mono transition-colors">
-            &larr; Back
-          </Link>
+          <div className="flex items-center justify-between mb-8">
+            <Link href="/dashboard" className="text-text-dim hover:text-text-muted text-sm font-mono transition-colors">
+              &larr; Back
+            </Link>
+            <button
+              onClick={toggleTheme}
+              className="theme-toggle"
+              aria-label="Toggle theme"
+            >
+              {theme === "light" ? "\u263E" : "\u2600"}
+            </button>
+          </div>
 
-          <h1 className="font-mono text-2xl mt-8 mb-2">{file.title}</h1>
+          <h1 className="font-mono text-2xl mb-2">{file.title}</h1>
           <p className="text-text-muted text-sm mb-10">
             {wordCount} words &middot; {calculatePageCount(file.content)} pages
           </p>
 
           {/* Timer setting */}
-          <div className="border border-border rounded-lg p-6 bg-bg-card mb-6">
+          <div className="border border-border rounded-lg p-6 bg-bg-card card-elevated mb-6">
             <label className="block text-sm font-mono text-text-muted mb-3">
               Session Length
             </label>
@@ -415,7 +458,7 @@ export default function WritePage() {
           </div>
 
           {/* Text size */}
-          <div className="border border-border rounded-lg p-6 bg-bg-card mb-8">
+          <div className="border border-border rounded-lg p-6 bg-bg-card card-elevated mb-8">
             <label className="block text-sm font-mono text-text-muted mb-3">
               Text Size
             </label>
@@ -430,7 +473,7 @@ export default function WritePage() {
                     onClick={() => handleTextSizeChange(key)}
                     className={`w-12 h-12 rounded border font-mono transition-colors ${
                       settings.textSize === key
-                        ? "border-accent bg-accent text-bg"
+                        ? "border-accent bg-accent text-white"
                         : "border-border hover:border-accent text-text-muted hover:text-accent"
                     }`}
                   >
@@ -444,7 +487,7 @@ export default function WritePage() {
           {/* Start button */}
           <button
             onClick={startSession}
-            className="w-full bg-accent text-bg py-4 rounded font-mono text-lg hover:bg-accent-hover transition-colors pulse-glow"
+            className="w-full bg-accent text-white py-4 rounded font-mono text-lg hover:bg-accent-hover transition-colors pulse-glow"
           >
             Lock In &amp; Write
           </button>
@@ -465,14 +508,45 @@ export default function WritePage() {
     );
   }
 
-  // ---- WRITING SCREEN (LOCKED IN) ----
+  // ---- WRITING SCREEN (LOCKED IN) — Word-like paper UI ----
   if (editorState === "writing") {
     const progress = 1 - timeLeft / (sessionMinutes * 60);
     const isLowTime = timeLeft <= 60;
+    const currentPages = calculatePageCount(contentRef.current);
 
     return (
-      <div className="fixed inset-0 bg-bg-warm z-50 flex flex-col">
-        {/* Top bar — minimal */}
+      <div className="fixed inset-0 bg-bg-warm z-50 flex flex-col editor-page-container">
+        {/* Dissuasive overlay when user exits fullscreen */}
+        {showDissuasive && (
+          <div className="fixed inset-0 z-[100] dissuasive-overlay flex items-center justify-center px-6">
+            <div className="w-full max-w-md text-center fade-in">
+              <div className="text-accent text-5xl mb-6">&#9888;</div>
+              <h2 className="font-mono text-2xl mb-3">{dissuasiveMsg.title}</h2>
+              <p className="text-text-muted leading-relaxed mb-8">
+                {dissuasiveMsg.body}
+              </p>
+              <div className="space-y-3">
+                <button
+                  onClick={handleGoBackToWriting}
+                  className="w-full bg-accent text-white py-4 rounded font-mono text-lg hover:bg-accent-hover transition-colors pulse-glow"
+                >
+                  Go Back to Writing
+                </button>
+                <button
+                  onClick={handleContinueWithoutFullscreen}
+                  className="w-full border border-border py-3 rounded font-mono text-sm text-text-dim hover:text-text-muted transition-colors"
+                >
+                  Continue without fullscreen
+                </button>
+              </div>
+              <p className="text-text-dim text-xs mt-6 font-mono">
+                {formatTime(timeLeft)} remaining in your session
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Top bar */}
         <div className="flex items-center justify-between px-6 py-3 border-b border-border/50">
           <div className="flex items-center gap-4">
             <span className="font-mono text-sm text-text-dim">{file.title}</span>
@@ -514,6 +588,15 @@ export default function WritePage() {
                 )
               )}
             </div>
+            {/* Theme toggle */}
+            <button
+              onClick={toggleTheme}
+              className="theme-toggle"
+              style={{ width: 28, height: 28, fontSize: 13 }}
+              aria-label="Toggle theme"
+            >
+              {theme === "light" ? "\u263E" : "\u2600"}
+            </button>
           </div>
         </div>
 
@@ -525,18 +608,29 @@ export default function WritePage() {
           />
         </div>
 
-        {/* Writing area */}
-        <div className="flex-1 overflow-auto">
-          <div className="max-w-3xl mx-auto px-6 md:px-12 py-8 h-full">
-            <textarea
-              ref={textareaRef}
-              defaultValue={file.content}
-              onChange={handleContentChange}
-              placeholder="Start writing..."
-              className={`writing-area w-full h-full bg-transparent text-text resize-none font-serif ${TEXT_SIZES[settings.textSize].class}`}
-              spellCheck
-              autoFocus
-            />
+        {/* Writing area — Word-like paper in center */}
+        <div className="flex-1 overflow-auto py-8 px-4">
+          <div className="max-w-[750px] mx-auto">
+            {/* Paper page */}
+            <div className="paper-page page-flip-in min-h-[900px] px-16 py-12">
+              <textarea
+                ref={textareaRef}
+                defaultValue={file.content}
+                onChange={handleContentChange}
+                placeholder="Start writing..."
+                className={`writing-area w-full h-full bg-transparent text-text resize-none font-serif ${TEXT_SIZES[settings.textSize].class}`}
+                style={{ minHeight: "840px" }}
+                spellCheck
+                autoFocus
+              />
+            </div>
+
+            {/* Page number */}
+            <div className="text-center mt-4 mb-8">
+              <span className="text-text-dim text-xs font-mono">
+                Page {currentPages || 1}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -545,7 +639,7 @@ export default function WritePage() {
           <span>{wordCount} words total</span>
           <span>+{sessionWordCount} this session</span>
           <span>
-            {calculatePageCount(contentRef.current)}
+            {currentPages}
             {plan === "free" ? ` / ${FREE_MAX_PAGES}` : ""} pages
           </span>
         </div>
@@ -567,7 +661,7 @@ export default function WritePage() {
 
         {/* Stats card */}
         {stats && (
-          <div className="border border-border rounded-lg p-6 bg-bg-card mb-6">
+          <div className="border border-border rounded-lg p-6 bg-bg-card card-elevated mb-6">
             <h2 className="font-mono text-sm text-text-muted mb-4 uppercase tracking-wider">
               Your Session
             </h2>
@@ -616,7 +710,7 @@ export default function WritePage() {
         )}
 
         {/* Next session scheduler */}
-        <div className="border border-border rounded-lg p-6 bg-bg-card mb-6">
+        <div className="border border-border rounded-lg p-6 bg-bg-card card-elevated mb-6">
           <h2 className="font-mono text-sm text-text-muted mb-1 uppercase tracking-wider">
             Next Session
           </h2>
@@ -671,7 +765,7 @@ export default function WritePage() {
               <button
                 onClick={scheduleReminder}
                 disabled={!nextSessionDate || !nextSessionTime || reminderSending}
-                className="w-full border border-accent text-accent py-2.5 rounded font-mono text-sm hover:bg-accent hover:text-bg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-full border border-accent text-accent py-2.5 rounded font-mono text-sm hover:bg-accent hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {reminderSending
                   ? "Scheduling..."
@@ -698,7 +792,7 @@ export default function WritePage() {
             onClick={() => {
               setEditorState("setup");
             }}
-            className="w-full bg-accent text-bg py-3 rounded font-mono text-sm hover:bg-accent-hover transition-colors"
+            className="w-full bg-accent text-white py-3 rounded font-mono text-sm hover:bg-accent-hover transition-colors"
           >
             Write Again
           </button>
@@ -715,7 +809,7 @@ export default function WritePage() {
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
               }}
-              className="w-full border border-accent text-accent py-3 rounded font-mono text-sm hover:bg-accent hover:text-bg transition-colors"
+              className="w-full border border-accent text-accent py-3 rounded font-mono text-sm hover:bg-accent hover:text-white transition-colors"
             >
               Download as .txt
             </button>

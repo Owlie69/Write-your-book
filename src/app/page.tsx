@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { PLANS } from "@/lib/constants";
+import { useTheme } from "@/lib/theme-context";
 
 function TypingEffect({ words }: { words: string[] }) {
   const [index, setIndex] = useState(0);
@@ -41,6 +42,20 @@ function TypingEffect({ words }: { words: string[] }) {
   );
 }
 
+function ThemeToggle() {
+  const { theme, toggleTheme } = useTheme();
+  return (
+    <button
+      onClick={toggleTheme}
+      className="theme-toggle"
+      aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+      title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+    >
+      {theme === "light" ? "\u263E" : "\u2600"}
+    </button>
+  );
+}
+
 function PricingCard({
   plan,
   type,
@@ -52,14 +67,14 @@ function PricingCard({
 }) {
   return (
     <div
-      className={`relative rounded-lg border p-8 flex flex-col ${
+      className={`relative rounded-lg border p-8 flex flex-col card-elevated ${
         popular
           ? "border-accent bg-bg-card scale-105"
-          : "border-border bg-bg-card/50"
+          : "border-border bg-bg-card/80"
       }`}
     >
       {popular && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-accent text-bg text-xs font-bold px-3 py-1 rounded-full">
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-accent text-white text-xs font-bold px-3 py-1 rounded-full">
           MOST POPULAR
         </div>
       )}
@@ -86,7 +101,7 @@ function PricingCard({
         href={type === "free" ? "/dashboard" : "/auth/signup"}
         className={`block text-center py-3 px-6 rounded font-mono text-sm transition-colors ${
           popular
-            ? "bg-accent text-bg hover:bg-accent-hover"
+            ? "bg-accent text-white hover:bg-accent-hover"
             : "border border-border hover:border-accent hover:text-accent"
         }`}
       >
@@ -100,11 +115,11 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-bg paper-texture">
       {/* Nav */}
-      <nav className="flex items-center justify-between px-6 md:px-12 py-6 max-w-6xl mx-auto">
+      <nav className="flex items-center justify-between px-6 md:px-16 py-6 max-w-6xl mx-auto">
         <Link href="/" className="font-mono text-xl tracking-tight">
           <span className="text-accent">Just</span>Write
         </Link>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-5">
           <Link
             href="#pricing"
             className="text-text-muted hover:text-text text-sm font-mono transition-colors"
@@ -119,16 +134,17 @@ export default function LandingPage() {
           </Link>
           <Link
             href="/dashboard"
-            className="bg-accent text-bg px-4 py-2 rounded text-sm font-mono hover:bg-accent-hover transition-colors"
+            className="bg-accent text-white px-4 py-2 rounded text-sm font-mono hover:bg-accent-hover transition-colors"
           >
             Start Writing
           </Link>
+          <ThemeToggle />
         </div>
       </nav>
 
       {/* Hero */}
-      <section className="px-6 md:px-12 py-20 md:py-32 max-w-4xl mx-auto text-center fade-in">
-        <h1 className="text-4xl md:text-6xl font-serif leading-tight mb-6">
+      <section className="px-6 md:px-16 py-28 md:py-40 max-w-4xl mx-auto text-center fade-in">
+        <h1 className="text-4xl md:text-6xl font-serif leading-tight mb-8">
           Lock in.
           <br />
           Write your{" "}
@@ -136,18 +152,18 @@ export default function LandingPage() {
           <br />
           Ship it.
         </h1>
-        <p className="text-text-muted text-lg md:text-xl max-w-2xl mx-auto mb-4 leading-relaxed">
+        <p className="text-text-muted text-lg md:text-xl max-w-2xl mx-auto mb-5 leading-relaxed">
           In a world designed to drain your attention, this is the tool that holds it.
           No AI writing for you. No fancy formatting. No excuses.
         </p>
-        <p className="text-text-dim text-base max-w-xl mx-auto mb-10">
+        <p className="text-text-dim text-base max-w-xl mx-auto mb-12">
           Your ideas are your number one advantage. JustWrite locks you in so
           you can finally get them out of your head and onto the page.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
             href="/dashboard"
-            className="bg-accent text-bg px-8 py-4 rounded font-mono text-lg hover:bg-accent-hover transition-colors pulse-glow"
+            className="bg-accent text-white px-8 py-4 rounded font-mono text-lg hover:bg-accent-hover transition-colors pulse-glow"
           >
             Start Writing — It&apos;s Free
           </Link>
@@ -160,12 +176,15 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Spacer */}
+      <div className="h-8" />
+
       {/* How it works */}
-      <section id="how-it-works" className="px-6 md:px-12 py-20 max-w-5xl mx-auto">
-        <h2 className="text-3xl md:text-4xl font-serif text-center mb-16">
+      <section id="how-it-works" className="px-6 md:px-16 py-24 max-w-5xl mx-auto">
+        <h2 className="text-3xl md:text-4xl font-serif text-center mb-20">
           Three steps. That&apos;s it.
         </h2>
-        <div className="grid md:grid-cols-3 gap-12">
+        <div className="grid md:grid-cols-3 gap-16">
           {[
             {
               step: "01",
@@ -192,9 +211,12 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Spacer */}
+      <div className="h-12" />
+
       {/* Attention holder */}
-      <section className="px-6 md:px-12 py-20 max-w-4xl mx-auto">
-        <div className="grid md:grid-cols-2 gap-12 items-center">
+      <section className="px-6 md:px-16 py-24 max-w-4xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-16 items-center">
           <div>
             <h2 className="text-2xl md:text-3xl font-serif mb-6">
               Every app fights for your attention.
@@ -212,7 +234,7 @@ export default function LandingPage() {
               uninterrupted time they deserve.
             </p>
           </div>
-          <div className="border border-border rounded-lg p-8 bg-bg-card">
+          <div className="border border-border rounded-lg p-8 bg-bg-card card-elevated">
             <div className="space-y-6">
               <div className="flex items-start gap-4">
                 <div className="font-mono text-danger text-xl leading-none mt-1">&times;</div>
@@ -234,20 +256,23 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Spacer */}
+      <div className="h-12" />
+
       {/* Your ideas are your advantage */}
-      <section className="px-6 md:px-12 py-20 max-w-3xl mx-auto text-center">
-        <div className="border border-border rounded-lg p-8 md:p-12 bg-bg-card">
-          <h2 className="text-2xl md:text-3xl font-serif mb-6">
+      <section className="px-6 md:px-16 py-24 max-w-3xl mx-auto text-center">
+        <div className="border border-border rounded-lg p-10 md:p-14 bg-bg-card card-elevated">
+          <h2 className="text-2xl md:text-3xl font-serif mb-8">
             Your ideas are your #1 advantage.
             <br />
             <span className="text-text-muted">Don&apos;t let them die in your head.</span>
           </h2>
-          <p className="text-text-muted leading-relaxed mb-4">
+          <p className="text-text-muted leading-relaxed mb-5">
             Everyone&apos;s got a book in them. A journal they keep meaning to start.
             A story that&apos;s been bouncing around their head for years.
             The ideas are there. The words are there. What&apos;s missing is the space to get them out.
           </p>
-          <p className="text-text-muted leading-relaxed mb-4">
+          <p className="text-text-muted leading-relaxed mb-5">
             You don&apos;t need AI to write your story. You don&apos;t need a
             co-pilot. You need uninterrupted time with your own thoughts.
             That&apos;s what makes your writing yours.
@@ -259,12 +284,15 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Spacer */}
+      <div className="h-12" />
+
       {/* Pricing */}
-      <section id="pricing" className="px-6 md:px-12 py-20 max-w-5xl mx-auto">
-        <h2 className="text-3xl md:text-4xl font-serif text-center mb-4">
+      <section id="pricing" className="px-6 md:px-16 py-24 max-w-5xl mx-auto">
+        <h2 className="text-3xl md:text-4xl font-serif text-center mb-5">
           Simple pricing
         </h2>
-        <p className="text-text-muted text-center mb-16 max-w-md mx-auto">
+        <p className="text-text-muted text-center mb-20 max-w-md mx-auto">
           Start for free. Upgrade when you&apos;re ready to commit.
         </p>
         <div className="grid md:grid-cols-3 gap-8 items-start">
@@ -274,25 +302,28 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Spacer */}
+      <div className="h-12" />
+
       {/* Final CTA */}
-      <section className="px-6 md:px-12 py-20 max-w-3xl mx-auto text-center">
+      <section className="px-6 md:px-16 py-24 max-w-3xl mx-auto text-center">
         <h2 className="text-3xl md:text-4xl font-serif mb-6">
           Your book isn&apos;t going to write itself.
         </h2>
-        <p className="text-text-muted mb-8">
+        <p className="text-text-muted mb-10">
           Stop planning. Stop researching. Stop overthinking.
           Open JustWrite, set the timer, and start putting words on the page.
         </p>
         <Link
           href="/dashboard"
-          className="inline-block bg-accent text-bg px-8 py-4 rounded font-mono text-lg hover:bg-accent-hover transition-colors"
+          className="inline-block bg-accent text-white px-8 py-4 rounded font-mono text-lg hover:bg-accent-hover transition-colors"
         >
           Start Writing Now
         </Link>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border px-6 md:px-12 py-8 max-w-6xl mx-auto">
+      <footer className="border-t border-border px-6 md:px-16 py-10 max-w-6xl mx-auto mt-8">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="font-mono text-sm text-text-dim">
             <span className="text-accent">Just</span>Write &copy; {new Date().getFullYear()}

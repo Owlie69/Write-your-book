@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { useTheme } from "@/lib/theme-context";
 import {
   getLocalFiles,
   saveLocalFiles,
@@ -28,6 +29,7 @@ function downloadFile(file: WritingFile) {
 
 export default function DashboardPage() {
   const { user, plan, signOut } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [files, setFiles] = useState<WritingFile[]>([]);
   const [showNewFile, setShowNewFile] = useState(false);
   const [newTitle, setNewTitle] = useState("");
@@ -100,6 +102,13 @@ export default function DashboardPage() {
               Sign In for Cloud Sync
             </Link>
           )}
+          <button
+            onClick={toggleTheme}
+            className="theme-toggle"
+            aria-label="Toggle theme"
+          >
+            {theme === "light" ? "\u263E" : "\u2600"}
+          </button>
         </div>
       </nav>
 
@@ -117,14 +126,14 @@ export default function DashboardPage() {
           {canCreate ? (
             <button
               onClick={() => setShowNewFile(true)}
-              className="bg-accent text-bg px-5 py-2.5 rounded font-mono text-sm hover:bg-accent-hover transition-colors"
+              className="bg-accent text-white px-5 py-2.5 rounded font-mono text-sm hover:bg-accent-hover transition-colors"
             >
               + New File
             </button>
           ) : (
             <Link
               href="/#pricing"
-              className="border border-accent text-accent px-5 py-2.5 rounded font-mono text-sm hover:bg-accent hover:text-bg transition-colors"
+              className="border border-accent text-accent px-5 py-2.5 rounded font-mono text-sm hover:bg-accent hover:text-white transition-colors"
             >
               Upgrade for More Files
             </Link>
@@ -133,7 +142,7 @@ export default function DashboardPage() {
 
         {/* New file modal */}
         {showNewFile && (
-          <div className="mb-8 border border-border rounded-lg p-6 bg-bg-card fade-in">
+          <div className="mb-8 border border-border rounded-lg p-6 bg-bg-card card-elevated fade-in">
             <h2 className="font-mono text-lg mb-4">New Writing File</h2>
             <div className="flex gap-3">
               <input
@@ -148,7 +157,7 @@ export default function DashboardPage() {
               <button
                 onClick={handleCreateFile}
                 disabled={!newTitle.trim()}
-                className="bg-accent text-bg px-6 py-3 rounded font-mono text-sm hover:bg-accent-hover transition-colors disabled:opacity-50"
+                className="bg-accent text-white px-6 py-3 rounded font-mono text-sm hover:bg-accent-hover transition-colors disabled:opacity-50"
               >
                 Create
               </button>
@@ -175,7 +184,7 @@ export default function DashboardPage() {
             </p>
             <button
               onClick={() => setShowNewFile(true)}
-              className="bg-accent text-bg px-6 py-3 rounded font-mono text-sm hover:bg-accent-hover transition-colors"
+              className="bg-accent text-white px-6 py-3 rounded font-mono text-sm hover:bg-accent-hover transition-colors"
             >
               Create Your First File
             </button>
@@ -191,7 +200,7 @@ export default function DashboardPage() {
               return (
                 <div
                   key={file.id}
-                  className="border border-border rounded-lg p-6 bg-bg-card hover:bg-bg-card-hover transition-colors group"
+                  className="border border-border rounded-lg p-6 bg-bg-card card-elevated hover:bg-bg-card-hover transition-colors group"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -215,7 +224,7 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-2 ml-4">
                       <Link
                         href={`/write/${file.id}`}
-                        className="bg-accent text-bg px-4 py-2 rounded font-mono text-sm hover:bg-accent-hover transition-colors"
+                        className="bg-accent text-white px-4 py-2 rounded font-mono text-sm hover:bg-accent-hover transition-colors"
                       >
                         Write
                       </Link>
