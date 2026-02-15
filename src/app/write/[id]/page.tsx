@@ -40,7 +40,6 @@ interface SessionStats {
   wordsPerMinute: number;
 }
 
-// Dissuasive messages shown when user exits fullscreen
 const DISSUASIVE_MESSAGES = [
   { title: "Wait — you were in the zone!", body: "Your best writing happens when you stay locked in. The timer is still running. Get back in there." },
   { title: "Don't break the flow.", body: "Every great writer pushes through the urge to stop. You've got words left in you. Keep going." },
@@ -48,22 +47,22 @@ const DISSUASIVE_MESSAGES = [
   { title: "The resistance is lying to you.", body: "That voice telling you to stop? It's the same one that's kept your book unfinished. Ignore it. Write." },
 ];
 
-// ~3000 chars per A4 page — split content into pages
-const CHARS_PER_A4 = 3000;
+// 25 lines per A4 page
+const LINES_PER_PAGE = 25;
 
 function splitIntoPages(content: string): string[] {
   if (!content) return [""];
+  const lines = content.split("\n");
   const pages: string[] = [];
-  let remaining = content;
-  while (remaining.length > CHARS_PER_A4) {
-    // Try to break at a newline near the limit
-    let breakAt = remaining.lastIndexOf("\n", CHARS_PER_A4);
-    if (breakAt < CHARS_PER_A4 * 0.7) breakAt = CHARS_PER_A4;
-    pages.push(remaining.slice(0, breakAt));
-    remaining = remaining.slice(breakAt).replace(/^\n/, "");
+  for (let i = 0; i < lines.length; i += LINES_PER_PAGE) {
+    pages.push(lines.slice(i, i + LINES_PER_PAGE).join("\n"));
   }
-  pages.push(remaining);
+  if (pages.length === 0) pages.push("");
   return pages;
+}
+
+function joinPages(pages: string[]): string {
+  return pages.join("\n");
 }
 
 export default function WritePage() {
@@ -86,10 +85,10 @@ export default function WritePage() {
   const [showDissuasive, setShowDissuasive] = useState(false);
   const [dissuasiveMsg, setDissuasiveMsg] = useState(DISSUASIVE_MESSAGES[0]);
 
-  // Pagination state
+  // Pagination
   const [pages, setPages] = useState<string[]>([""]);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
-  const [flippingForward, setFlippingForward] = useState(false);
+  const [pageFlipAnim, setPageFlipAnim] = useState(false);
 
   // Next session scheduler
   const [nextSessionDate, setNextSessionDate] = useState("");
@@ -125,14 +124,12 @@ export default function WritePage() {
       startWordCountRef.current = wc;
       prevWordCountRef.current = wc;
       peakWordCountRef.current = wc;
-      // Init pages
       const initialPages = splitIntoPages(found.content);
       setPages(initialPages);
       setCurrentPageIndex(initialPages.length - 1);
     }
   }, [fileId]);
 
-  // Auto-save every 10 seconds during writing
   const saveFile = useCallback(
     async (content: string) => {
       if (!file) return;
@@ -164,15 +161,12 @@ export default function WritePage() {
   // Auto-save interval
   useEffect(() => {
     if (editorState !== "writing") return;
-
     const interval = setInterval(() => {
       saveFile(contentRef.current);
     }, 10000);
-
     return () => clearInterval(interval);
   }, [editorState, saveFile]);
 
-  // Finalize stats and move to done
   const finishSession = useCallback(() => {
     saveFile(contentRef.current);
     const finalWc = contentRef.current.split(/\s+/).filter(Boolean).length;
@@ -204,7 +198,6 @@ export default function WritePage() {
   // Timer
   useEffect(() => {
     if (editorState !== "writing") return;
-
     timerRef.current = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
@@ -215,16 +208,14 @@ export default function WritePage() {
         return prev - 1;
       });
     }, 1000);
-
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [editorState, finishSession]);
 
-  // Detect fullscreen exit during writing — show dissuasive overlay
+  // Detect fullscreen exit
   useEffect(() => {
     if (editorState !== "writing") return;
-
     function handleFullscreenChange() {
       if (!document.fullscreenElement && editorState === "writing") {
         const msg = DISSUASIVE_MESSAGES[Math.floor(Math.random() * DISSUASIVE_MESSAGES.length)];
@@ -232,55 +223,57 @@ export default function WritePage() {
         setShowDissuasive(true);
       }
     }
-
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, [editorState]);
 
-  // Prevent leaving during session
+  // Prevent leaving
   useEffect(() => {
     if (editorState !== "writing") return;
-
     function handleBeforeUnload(e: BeforeUnloadEvent) {
       e.preventDefault();
-      e.returnValue =
-        "Your writing session is still active. Are you sure you want to leave?";
+      e.returnValue = "Your writing session is still active. Are you sure you want to leave?";
       return e.returnValue;
     }
-
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === "w") {
-        e.preventDefault();
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === "t") {
-        e.preventDefault();
-      }
+      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); }
+      if ((e.ctrlKey || e.metaKey) && e.key === "w") { e.preventDefault(); }
+      if ((e.ctrlKey || e.metaKey) && e.key === "t") { e.preventDefault(); }
     }
-
     window.addEventListener("beforeunload", handleBeforeUnload);
     document.addEventListener("keydown", handleKeyDown, true);
-
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
       document.removeEventListener("keydown", handleKeyDown, true);
     };
   }, [editorState]);
 
+  // Keyboard arrow nav between pages
+  useEffect(() => {
+    if (editorState !== "writing") return;
+    function handleKeyNav(e: KeyboardEvent) {
+      if (e.ctrlKey && e.key === "ArrowLeft") {
+        e.preventDefault();
+        setCurrentPageIndex((i) => Math.max(0, i - 1));
+        setTimeout(() => textareaRef.current?.focus(), 50);
+      }
+      if (e.ctrlKey && e.key === "ArrowRight") {
+        e.preventDefault();
+        setCurrentPageIndex((i) => Math.min(pages.length - 1, i + 1));
+        setTimeout(() => textareaRef.current?.focus(), 50);
+      }
+    }
+    document.addEventListener("keydown", handleKeyNav);
+    return () => document.removeEventListener("keydown", handleKeyNav);
+  }, [editorState, pages.length]);
+
   function enterFullscreen() {
     const el = document.documentElement;
-    if (el.requestFullscreen) {
-      el.requestFullscreen().catch(() => {});
-    }
+    if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
   }
 
   function exitFullscreen() {
-    if (document.fullscreenElement) {
-      document.exitFullscreen().catch(() => {});
-    }
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
   }
 
   function handleGoBackToWriting() {
@@ -323,67 +316,73 @@ export default function WritePage() {
 
   function handleContentChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     const pageContent = e.target.value;
+    const lineCount = pageContent.split("\n").length;
 
-    // Build full content by replacing current page
+    // Build full content
     const newPages = [...pages];
     newPages[currentPageIndex] = pageContent;
-    const fullContent = newPages.join("\n");
 
-    if (plan === "free") {
-      const pageCount = calculatePageCount(fullContent);
-      if (!canAddPages(pageCount, plan)) {
-        return;
-      }
-    }
+    // Auto-flip: if lines exceed LINES_PER_PAGE, push overflow to next page
+    if (lineCount > LINES_PER_PAGE) {
+      const lines = pageContent.split("\n");
+      const keep = lines.slice(0, LINES_PER_PAGE).join("\n");
+      const overflow = lines.slice(LINES_PER_PAGE).join("\n");
 
-    const lenDiff = fullContent.length - prevContentLenRef.current;
-    if (lenDiff > 0) {
-      totalCharsTypedRef.current += lenDiff;
-    } else if (lenDiff < 0) {
-      totalCharsDeletedRef.current += Math.abs(lenDiff);
-    }
-    prevContentLenRef.current = fullContent.length;
-
-    const wc = fullContent.split(/\s+/).filter(Boolean).length;
-    const wcDiff = wc - prevWordCountRef.current;
-    if (wcDiff > 0) {
-      totalWordsAddedRef.current += wcDiff;
-    } else if (wcDiff < 0) {
-      totalWordsErasedRef.current += Math.abs(wcDiff);
-    }
-    prevWordCountRef.current = wc;
-
-    if (wc > peakWordCountRef.current) {
-      peakWordCountRef.current = wc;
-    }
-
-    contentRef.current = fullContent;
-    setPages(newPages);
-    setWordCount(wc);
-    setSessionWordCount(wc - startWordCountRef.current);
-
-    // Auto-flip to new page when current page is full
-    if (pageContent.length >= CHARS_PER_A4) {
-      const overflow = pageContent.slice(CHARS_PER_A4);
-      newPages[currentPageIndex] = pageContent.slice(0, CHARS_PER_A4);
+      newPages[currentPageIndex] = keep;
       const nextIdx = currentPageIndex + 1;
       if (nextIdx >= newPages.length) {
         newPages.push(overflow);
       } else {
-        newPages[nextIdx] = overflow + newPages[nextIdx];
+        newPages[nextIdx] = overflow + (newPages[nextIdx] ? "\n" + newPages[nextIdx] : "");
       }
+
+      const fullContent = joinPages(newPages);
+      updateStats(fullContent);
+      contentRef.current = fullContent;
       setPages([...newPages]);
-      setFlippingForward(true);
+
+      // Animate page flip
+      setPageFlipAnim(true);
       setCurrentPageIndex(nextIdx);
       setTimeout(() => {
-        setFlippingForward(false);
+        setPageFlipAnim(false);
         textareaRef.current?.focus();
         if (textareaRef.current) {
           textareaRef.current.selectionStart = overflow.length;
           textareaRef.current.selectionEnd = overflow.length;
         }
-      }, 600);
+      }, 400);
+      return;
     }
+
+    const fullContent = joinPages(newPages);
+
+    if (plan === "free") {
+      const pageCount = calculatePageCount(fullContent);
+      if (!canAddPages(pageCount, plan)) return;
+    }
+
+    updateStats(fullContent);
+    contentRef.current = fullContent;
+    setPages(newPages);
+  }
+
+  function updateStats(fullContent: string) {
+    const lenDiff = fullContent.length - prevContentLenRef.current;
+    if (lenDiff > 0) totalCharsTypedRef.current += lenDiff;
+    else if (lenDiff < 0) totalCharsDeletedRef.current += Math.abs(lenDiff);
+    prevContentLenRef.current = fullContent.length;
+
+    const wc = fullContent.split(/\s+/).filter(Boolean).length;
+    const wcDiff = wc - prevWordCountRef.current;
+    if (wcDiff > 0) totalWordsAddedRef.current += wcDiff;
+    else if (wcDiff < 0) totalWordsErasedRef.current += Math.abs(wcDiff);
+    prevWordCountRef.current = wc;
+
+    if (wc > peakWordCountRef.current) peakWordCountRef.current = wc;
+
+    setWordCount(wc);
+    setSessionWordCount(wc - startWordCountRef.current);
   }
 
   function goToPage(idx: number) {
@@ -404,10 +403,8 @@ export default function WritePage() {
       setReminderError("Sign in to receive email reminders");
       return;
     }
-
     setReminderSending(true);
     setReminderError(null);
-
     try {
       const res = await fetch("/api/reminder", {
         method: "POST",
@@ -421,7 +418,6 @@ export default function WritePage() {
           sessionTime: nextSessionTime,
         }),
       });
-
       if (res.ok) {
         setReminderSent(true);
       } else {
@@ -441,15 +437,13 @@ export default function WritePage() {
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   }
 
+  // ---- FILE NOT FOUND ----
   if (!file) {
     return (
       <div className="min-h-screen bg-bg flex items-center justify-center">
         <div className="text-center">
           <p className="text-text-muted mb-4">File not found</p>
-          <Link
-            href="/dashboard"
-            className="text-accent hover:underline font-mono text-sm"
-          >
+          <Link href="/dashboard" className="text-accent hover:underline font-mono text-sm">
             Back to Dashboard
           </Link>
         </div>
@@ -463,77 +457,69 @@ export default function WritePage() {
 
     return (
       <div className="min-h-screen bg-bg paper-texture flex items-center justify-center px-6">
-        <div className="w-full max-w-md text-center fade-in">
-          <div className="flex items-center justify-between mb-8">
+        <div className="w-full max-w-sm text-center fade-in">
+          <div className="flex items-center justify-between mb-16">
             <Link href="/dashboard" className="text-text-dim hover:text-text-muted text-sm font-mono transition-colors">
               &larr; Back
             </Link>
-            <button
-              onClick={toggleTheme}
-              className="theme-toggle"
-              aria-label="Toggle theme"
-            >
+            <button onClick={toggleTheme} className="theme-toggle" aria-label="Toggle theme">
               {theme === "light" ? "\u263E" : "\u2600"}
             </button>
           </div>
 
-          <h1 className="font-mono text-2xl mb-2">{file.title}</h1>
-          <p className="text-text-muted text-sm mb-10">
+          <h1 className="font-mono text-2xl mb-3">{file.title}</h1>
+          <p className="text-text-muted text-sm mb-16">
             {wordCount} words &middot; {calculatePageCount(file.content)} pages
           </p>
 
           {/* Timer setting */}
-          <div className="border border-border rounded-lg p-6 bg-bg-card card-elevated mb-6">
-            <label className="block text-sm font-mono text-text-muted mb-3">
+          <div className="border border-border rounded-lg p-8 bg-bg-card card-elevated mb-8">
+            <label className="block text-sm font-mono text-text-muted mb-5">
               Session Length
             </label>
             {canCustomize ? (
-              <div className="flex items-center justify-center gap-4">
+              <div className="flex items-center justify-center gap-6">
                 <button
-                  onClick={() =>
-                    setSessionMinutes((m) => Math.max(MIN_SESSION_MINUTES, m - 5))
-                  }
-                  className="w-10 h-10 rounded border border-border hover:border-accent text-text-muted hover:text-accent transition-colors font-mono"
+                  onClick={() => setSessionMinutes((m) => Math.max(MIN_SESSION_MINUTES, m - 5))}
+                  className="w-12 h-12 rounded border border-border hover:border-accent text-text-muted hover:text-accent transition-colors font-mono text-lg"
                 >
                   -
                 </button>
-                <span className="font-mono text-4xl text-accent w-24">
+                <span className="font-mono text-5xl text-accent w-28">
                   {sessionMinutes}
                 </span>
                 <button
-                  onClick={() =>
-                    setSessionMinutes((m) => Math.min(MAX_SESSION_MINUTES, m + 5))
-                  }
-                  className="w-10 h-10 rounded border border-border hover:border-accent text-text-muted hover:text-accent transition-colors font-mono"
+                  onClick={() => setSessionMinutes((m) => Math.min(MAX_SESSION_MINUTES, m + 5))}
+                  className="w-12 h-12 rounded border border-border hover:border-accent text-text-muted hover:text-accent transition-colors font-mono text-lg"
                 >
                   +
                 </button>
               </div>
             ) : (
-              <div className="font-mono text-4xl text-accent">
+              <div className="font-mono text-5xl text-accent">
                 {DEFAULT_SESSION_MINUTES}
               </div>
             )}
-            <p className="text-text-dim text-xs mt-2 font-mono">
+            <p className="text-text-dim text-xs mt-4 font-mono">
               {canCustomize ? "minutes" : "minutes (upgrade to customize)"}
             </p>
           </div>
 
           {/* Text size */}
-          <div className="border border-border rounded-lg p-6 bg-bg-card card-elevated mb-8">
+          <div className="border border-border rounded-lg p-8 bg-bg-card card-elevated mb-12">
             <label className="block text-sm font-mono text-text-muted mb-3">
               Text Size
             </label>
-            <p className="text-text-dim text-xs mb-4">
-              Focus on writing, not formatting. Pick a size that&apos;s comfortable.
+            <p className="text-text-dim text-xs mb-6">
+              Pick a size that&apos;s comfortable.
             </p>
-            <div className="flex items-center justify-center gap-3">
+            <div className="flex items-center justify-center gap-4">
               {(Object.entries(TEXT_SIZES) as [TextSize, { label: string; class: string }][]).map(
                 ([key, value]) => (
                   <button
                     key={key}
                     onClick={() => handleTextSizeChange(key)}
-                    className={`w-12 h-12 rounded border font-mono transition-colors ${
+                    className={`w-14 h-14 rounded border font-mono text-lg transition-colors ${
                       settings.textSize === key
                         ? "border-accent bg-accent text-white"
                         : "border-border hover:border-accent text-text-muted hover:text-accent"
@@ -554,14 +540,14 @@ export default function WritePage() {
             Lock In &amp; Write
           </button>
 
-          <p className="text-text-dim text-xs mt-4">
+          <p className="text-text-dim text-xs mt-6 leading-relaxed">
             Once you start, the app goes fullscreen.
             <br />
             No going back until the timer runs out.
           </p>
 
           {plan === "free" && (
-            <p className="text-text-dim text-xs mt-4">
+            <p className="text-text-dim text-xs mt-6">
               Free plan: {FREE_MAX_PAGES} pages max per file.
             </p>
           )}
@@ -570,12 +556,13 @@ export default function WritePage() {
     );
   }
 
-  // ---- WRITING SCREEN (LOCKED IN) — paginated A4 paper ----
+  // ---- WRITING SCREEN — 25-line A4 pages, centered ----
   if (editorState === "writing") {
     const progress = 1 - timeLeft / (sessionMinutes * 60);
     const isLowTime = timeLeft <= 60;
     const totalPagesCount = pages.length;
     const hasPrev = currentPageIndex > 0;
+    const hasNext = currentPageIndex < pages.length - 1;
 
     return (
       <div className="fixed inset-0 bg-bg-warm z-50 flex flex-col editor-page-container">
@@ -583,12 +570,10 @@ export default function WritePage() {
         {showDissuasive && (
           <div className="fixed inset-0 z-[100] dissuasive-overlay flex items-center justify-center px-6">
             <div className="w-full max-w-md text-center fade-in">
-              <div className="text-accent text-5xl mb-6">&#9888;</div>
-              <h2 className="font-mono text-2xl mb-3">{dissuasiveMsg.title}</h2>
-              <p className="text-text-muted leading-relaxed mb-8">
-                {dissuasiveMsg.body}
-              </p>
-              <div className="space-y-3">
+              <div className="text-accent text-5xl mb-8">&#9888;</div>
+              <h2 className="font-mono text-2xl mb-4">{dissuasiveMsg.title}</h2>
+              <p className="text-text-muted leading-relaxed mb-10">{dissuasiveMsg.body}</p>
+              <div className="space-y-4">
                 <button
                   onClick={handleGoBackToWriting}
                   className="w-full bg-accent text-white py-4 rounded font-mono text-lg hover:bg-accent-hover transition-colors pulse-glow"
@@ -602,21 +587,19 @@ export default function WritePage() {
                   Continue without fullscreen
                 </button>
               </div>
-              <p className="text-text-dim text-xs mt-6 font-mono">
-                {formatTime(timeLeft)} remaining in your session
+              <p className="text-text-dim text-xs mt-8 font-mono">
+                {formatTime(timeLeft)} remaining
               </p>
             </div>
           </div>
         )}
 
         {/* Top bar */}
-        <div className="flex items-center justify-between px-6 py-3 border-b border-border/50">
+        <div className="flex items-center justify-between px-8 py-3 border-b border-border/50">
           <span className="font-mono text-sm text-text-dim">{file.title}</span>
-
           <div className={`font-mono text-lg ${isLowTime ? "text-danger" : "text-accent"}`}>
             {formatTime(timeLeft)}
           </div>
-
           <div className="flex items-center gap-4">
             <span className="text-xs font-mono text-text-dim">
               {isSaving ? "Saving..." : lastSaved ? `Saved ${lastSaved.toLocaleTimeString()}` : ""}
@@ -655,81 +638,61 @@ export default function WritePage() {
           />
         </div>
 
-        {/* Page area — centered with optional ghost of previous page */}
-        <div className="flex-1 overflow-hidden flex items-center justify-center py-8">
-          <div className="relative flex items-center justify-center w-full h-full">
+        {/* Page area — scrollable, centered */}
+        <div className="flex-1 overflow-auto flex items-start justify-center py-12 px-4">
+          <div className="flex items-start justify-center gap-8">
 
-            {/* Ghost of previous page — left side, faded */}
+            {/* Ghost of previous page */}
             {hasPrev && (
               <div
-                className="absolute a4-page paper-page ghost-page cursor-pointer"
-                style={{ right: "calc(50% + 360px + 32px)" }}
+                className="a4-page paper-page ghost-page cursor-pointer hidden xl:block"
                 onClick={() => goToPage(currentPageIndex - 1)}
-                title="Go to previous page"
+                title={`Go to page ${currentPageIndex}`}
               >
                 <div
-                  className={`writing-area w-full h-full bg-transparent text-text font-serif pointer-events-none select-none overflow-hidden ${TEXT_SIZES[settings.textSize].class}`}
-                  style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+                  className={`w-full h-full bg-transparent text-text font-serif pointer-events-none select-none overflow-hidden ${TEXT_SIZES[settings.textSize].class}`}
+                  style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.8, letterSpacing: "0.02em" }}
                 >
                   {pages[currentPageIndex - 1]}
                 </div>
               </div>
             )}
 
-            {/* Current page — centered */}
-            <div
-              className={`a4-page paper-page ${flippingForward ? "page-flip-in" : ""}`}
-            >
+            {/* Current page */}
+            <div className={`a4-page paper-page ${pageFlipAnim ? "page-flip-in" : ""}`}>
               <textarea
                 ref={textareaRef}
                 value={pages[currentPageIndex] ?? ""}
                 onChange={handleContentChange}
                 placeholder={currentPageIndex === 0 ? "Start writing..." : ""}
-                className={`writing-area w-full h-full bg-transparent text-text resize-none font-serif ${TEXT_SIZES[settings.textSize].class}`}
+                className={`writing-area w-full bg-transparent text-text resize-none font-serif ${TEXT_SIZES[settings.textSize].class}`}
                 spellCheck
                 autoFocus
               />
             </div>
-
-            {/* Arrow nav — left */}
-            {hasPrev && (
-              <button
-                onClick={() => goToPage(currentPageIndex - 1)}
-                className="absolute left-4 text-text-dim hover:text-accent transition-colors font-mono text-2xl"
-                title="Previous page"
-              >
-                &#8592;
-              </button>
-            )}
-            {/* Arrow nav — right (only if there's a next page already) */}
-            {currentPageIndex < pages.length - 1 && (
-              <button
-                onClick={() => goToPage(currentPageIndex + 1)}
-                className="absolute right-4 text-text-dim hover:text-accent transition-colors font-mono text-2xl"
-                title="Next page"
-              >
-                &#8594;
-              </button>
-            )}
           </div>
         </div>
 
         {/* Bottom bar */}
-        <div className="flex items-center justify-between px-6 py-2 border-t border-border/50 text-xs font-mono text-text-dim">
-          <span>{wordCount} words total</span>
-          <span className="flex items-center gap-3">
+        <div className="flex items-center justify-between px-8 py-3 border-t border-border/50 text-xs font-mono text-text-dim">
+          <span>{wordCount} words</span>
+          <div className="flex items-center gap-4">
             <button
               onClick={() => goToPage(currentPageIndex - 1)}
               disabled={!hasPrev}
-              className="disabled:opacity-20 hover:text-accent transition-colors"
-            >&#8592;</button>
-            Page {currentPageIndex + 1} / {totalPagesCount}
+              className="disabled:opacity-20 hover:text-accent transition-colors px-2"
+            >
+              &#8592;
+            </button>
+            <span>Page {currentPageIndex + 1} of {totalPagesCount}</span>
             <button
               onClick={() => goToPage(currentPageIndex + 1)}
-              disabled={currentPageIndex >= pages.length - 1}
-              className="disabled:opacity-20 hover:text-accent transition-colors"
-            >&#8594;</button>
-          </span>
+              disabled={!hasNext}
+              className="disabled:opacity-20 hover:text-accent transition-colors px-2"
+            >
+              &#8594;
+            </button>
+          </div>
           <span>+{sessionWordCount} this session</span>
         </div>
       </div>
@@ -740,36 +703,36 @@ export default function WritePage() {
   const stats = sessionStats;
 
   return (
-    <div className="min-h-screen bg-bg paper-texture flex items-center justify-center px-6 py-12">
-      <div className="w-full max-w-lg text-center fade-in">
-        <div className="text-accent text-6xl mb-4">&#10003;</div>
-        <h1 className="font-mono text-2xl mb-2">Session Complete</h1>
-        <p className="text-text-muted mb-8">
+    <div className="min-h-screen bg-bg paper-texture">
+      <div className="max-w-lg mx-auto px-6 py-20 text-center fade-in">
+        <div className="text-accent text-6xl mb-6">&#10003;</div>
+        <h1 className="font-mono text-2xl mb-3">Session Complete</h1>
+        <p className="text-text-muted mb-12 leading-relaxed">
           You stayed locked in and wrote. That&apos;s what matters.
         </p>
 
         {/* Stats card */}
         {stats && (
-          <div className="border border-border rounded-lg p-6 bg-bg-card card-elevated mb-6">
-            <h2 className="font-mono text-sm text-text-muted mb-4 uppercase tracking-wider">
+          <div className="border border-border rounded-lg p-8 bg-bg-card card-elevated mb-8">
+            <h2 className="font-mono text-sm text-text-muted mb-6 uppercase tracking-wider">
               Your Session
             </h2>
-            <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-3 gap-6 mb-8">
               <div>
-                <div className="font-mono text-2xl text-accent">{stats.durationMinutes}</div>
-                <div className="text-text-dim text-xs">minutes</div>
+                <div className="font-mono text-3xl text-accent">{stats.durationMinutes}</div>
+                <div className="text-text-dim text-xs mt-1">minutes</div>
               </div>
               <div>
-                <div className="font-mono text-2xl text-accent">+{Math.max(0, stats.netWords)}</div>
-                <div className="text-text-dim text-xs">net words</div>
+                <div className="font-mono text-3xl text-accent">+{Math.max(0, stats.netWords)}</div>
+                <div className="text-text-dim text-xs mt-1">net words</div>
               </div>
               <div>
-                <div className="font-mono text-2xl text-accent">{stats.totalPages}</div>
-                <div className="text-text-dim text-xs">total pages</div>
+                <div className="font-mono text-3xl text-accent">{stats.totalPages}</div>
+                <div className="text-text-dim text-xs mt-1">total pages</div>
               </div>
             </div>
 
-            <div className="border-t border-border pt-4 grid grid-cols-2 gap-3 text-left">
+            <div className="border-t border-border pt-6 grid grid-cols-2 gap-4 text-left">
               <div className="flex justify-between">
                 <span className="text-text-dim text-xs">Words added</span>
                 <span className="font-mono text-xs text-success">+{stats.wordsAdded}</span>
@@ -799,19 +762,19 @@ export default function WritePage() {
         )}
 
         {/* Next session scheduler */}
-        <div className="border border-border rounded-lg p-6 bg-bg-card card-elevated mb-6">
-          <h2 className="font-mono text-sm text-text-muted mb-1 uppercase tracking-wider">
+        <div className="border border-border rounded-lg p-8 bg-bg-card card-elevated mb-8">
+          <h2 className="font-mono text-sm text-text-muted mb-2 uppercase tracking-wider">
             Next Session
           </h2>
-          <p className="text-text-dim text-xs mb-4">
-            Consistency is how books get finished. When&apos;s your next one?
+          <p className="text-text-dim text-xs mb-6">
+            Consistency is how books get finished.
           </p>
 
           {reminderSent ? (
-            <div className="py-4">
-              <div className="text-success text-2xl mb-2">&#10003;</div>
-              <p className="text-text-muted text-sm">
-                Reminder set! We&apos;ll email you the morning of{" "}
+            <div className="py-6">
+              <div className="text-success text-2xl mb-3">&#10003;</div>
+              <p className="text-text-muted text-sm leading-relaxed">
+                Reminder set for{" "}
                 <span className="text-accent font-mono">
                   {new Date(nextSessionDate + "T" + nextSessionTime).toLocaleDateString(undefined, {
                     weekday: "long",
@@ -819,42 +782,41 @@ export default function WritePage() {
                     day: "numeric",
                   })}
                 </span>{" "}
-                at{" "}
-                <span className="text-accent font-mono">{nextSessionTime}</span>.
+                at <span className="text-accent font-mono">{nextSessionTime}</span>.
               </p>
             </div>
           ) : (
             <>
-              <div className="flex gap-3 mb-3">
+              <div className="flex gap-4 mb-4">
                 <div className="flex-1">
-                  <label className="block text-xs text-text-dim mb-1 text-left font-mono">Date</label>
+                  <label className="block text-xs text-text-dim mb-2 text-left font-mono">Date</label>
                   <input
                     type="date"
                     value={nextSessionDate}
                     onChange={(e) => setNextSessionDate(e.target.value)}
                     min={new Date().toISOString().split("T")[0]}
-                    className="w-full bg-bg-input border border-border rounded px-3 py-2 text-text font-mono text-sm focus:border-accent focus:outline-none transition-colors"
+                    className="w-full bg-bg-input border border-border rounded px-3 py-2.5 text-text font-mono text-sm focus:border-accent focus:outline-none transition-colors"
                   />
                 </div>
                 <div className="flex-1">
-                  <label className="block text-xs text-text-dim mb-1 text-left font-mono">Time</label>
+                  <label className="block text-xs text-text-dim mb-2 text-left font-mono">Time</label>
                   <input
                     type="time"
                     value={nextSessionTime}
                     onChange={(e) => setNextSessionTime(e.target.value)}
-                    className="w-full bg-bg-input border border-border rounded px-3 py-2 text-text font-mono text-sm focus:border-accent focus:outline-none transition-colors"
+                    className="w-full bg-bg-input border border-border rounded px-3 py-2.5 text-text font-mono text-sm focus:border-accent focus:outline-none transition-colors"
                   />
                 </div>
               </div>
 
               {reminderError && (
-                <p className="text-danger text-xs font-mono mb-2">{reminderError}</p>
+                <p className="text-danger text-xs font-mono mb-3">{reminderError}</p>
               )}
 
               <button
                 onClick={scheduleReminder}
                 disabled={!nextSessionDate || !nextSessionTime || reminderSending}
-                className="w-full border border-accent text-accent py-2.5 rounded font-mono text-sm hover:bg-accent hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="w-full border border-accent text-accent py-3 rounded font-mono text-sm hover:bg-accent hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {reminderSending
                   ? "Scheduling..."
@@ -864,11 +826,9 @@ export default function WritePage() {
               </button>
 
               {!user && (
-                <p className="text-text-dim text-xs mt-2">
-                  <Link href="/auth/signin" className="text-accent hover:underline">
-                    Sign in
-                  </Link>{" "}
-                  to get email reminders for your next session.
+                <p className="text-text-dim text-xs mt-3">
+                  <Link href="/auth/signin" className="text-accent hover:underline">Sign in</Link>{" "}
+                  to get email reminders.
                 </p>
               )}
             </>
@@ -876,12 +836,10 @@ export default function WritePage() {
         </div>
 
         {/* Action buttons */}
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           <button
-            onClick={() => {
-              setEditorState("setup");
-            }}
-            className="w-full bg-accent text-white py-3 rounded font-mono text-sm hover:bg-accent-hover transition-colors"
+            onClick={() => setEditorState("setup")}
+            className="w-full bg-accent text-white py-3.5 rounded font-mono text-sm hover:bg-accent-hover transition-colors"
           >
             Write Again
           </button>
@@ -898,27 +856,27 @@ export default function WritePage() {
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
               }}
-              className="w-full border border-accent text-accent py-3 rounded font-mono text-sm hover:bg-accent hover:text-white transition-colors"
+              className="w-full border border-accent text-accent py-3.5 rounded font-mono text-sm hover:bg-accent hover:text-white transition-colors"
             >
               Download as .txt
             </button>
           ) : (
             <Link
               href="/#pricing"
-              className="w-full border border-border py-3 rounded font-mono text-sm text-text-dim hover:border-accent hover:text-accent transition-colors block text-center"
+              className="w-full border border-border py-3.5 rounded font-mono text-sm text-text-dim hover:border-accent hover:text-accent transition-colors block text-center"
             >
               Upgrade to Download Files
             </Link>
           )}
           <Link
             href="/dashboard"
-            className="w-full border border-border py-3 rounded font-mono text-sm hover:border-accent hover:text-accent transition-colors block"
+            className="w-full border border-border py-3.5 rounded font-mono text-sm hover:border-accent hover:text-accent transition-colors block text-center"
           >
             Back to Dashboard
           </Link>
         </div>
 
-        <p className="text-text-dim text-xs mt-8">
+        <p className="text-text-dim text-xs mt-12 leading-relaxed">
           &ldquo;A professional writer is an amateur who didn&apos;t quit.&rdquo;
         </p>
       </div>

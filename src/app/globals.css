@@ -93,7 +93,7 @@ html[data-theme="dark"] ::selection {
   caret-color: var(--color-accent);
   line-height: 1.8;
   letter-spacing: 0.02em;
-  min-height: 860px;
+  height: 100%;
 }
 
 .writing-area:focus {
@@ -231,26 +231,37 @@ html[data-theme="dark"] .paper-page::before {
 }
 
 /* ======== A4 page dimensions ======== */
-/* A4 = 210mm × 297mm. At 96dpi: ~794px × 1123px.
-   We display at a fixed width and let height follow. */
+/* Fixed A4-proportioned page: 25 lines at 1.8 line-height */
 .a4-page {
-  width: 720px;
-  min-height: 1020px;
-  padding: 80px 80px 80px 96px;
+  width: 680px;
+  height: 960px;
+  padding: 64px 72px 64px 88px;
   flex-shrink: 0;
+  overflow: hidden;
 }
 
-/* Ghost (previous) page — faded and scaled slightly smaller */
+@media (max-width: 768px) {
+  .a4-page {
+    width: 100%;
+    max-width: 520px;
+    height: auto;
+    min-height: 700px;
+    padding: 40px 32px 40px 44px;
+  }
+}
+
+/* Ghost (previous) page — faded, scaled down */
 .ghost-page {
-  opacity: 0.18;
-  transform: scale(0.92) translateX(4%);
+  opacity: 0.15;
+  transform: scale(0.88);
   transform-origin: right center;
   pointer-events: auto;
-  transition: opacity 0.2s;
+  transition: opacity 0.3s, transform 0.3s;
 }
 
 .ghost-page:hover {
-  opacity: 0.32;
+  opacity: 0.30;
+  transform: scale(0.90);
 }
 
 /* Theme toggle button */
