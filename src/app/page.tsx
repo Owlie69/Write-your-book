@@ -115,11 +115,11 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-bg paper-texture">
       {/* Nav */}
-      <nav className="flex items-center justify-between px-6 md:px-16 py-6 max-w-6xl mx-auto">
+      <nav className="flex items-center justify-between px-6 md:px-16 py-6 max-w-5xl mx-auto">
         <Link href="/" className="font-mono text-xl tracking-tight">
           <span className="text-accent">Just</span>Write
         </Link>
-        <div className="flex items-center gap-5">
+        <div className="flex items-center gap-6">
           <Link
             href="#pricing"
             className="text-text-muted hover:text-text text-sm font-mono transition-colors"
@@ -143,8 +143,8 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <section className="px-6 md:px-16 py-28 md:py-40 max-w-4xl mx-auto text-center fade-in">
-        <h1 className="text-4xl md:text-6xl font-serif leading-tight mb-8">
+      <section className="px-6 py-36 md:py-52 max-w-3xl mx-auto text-center fade-in">
+        <h1 className="text-4xl md:text-6xl font-serif leading-tight mb-10">
           Lock in.
           <br />
           Write your{" "}
@@ -152,11 +152,11 @@ export default function LandingPage() {
           <br />
           Ship it.
         </h1>
-        <p className="text-text-muted text-lg md:text-xl max-w-2xl mx-auto mb-5 leading-relaxed">
+        <p className="text-text-muted text-lg md:text-xl mx-auto mb-6 leading-relaxed">
           In a world designed to drain your attention, this is the tool that holds it.
           No AI writing for you. No fancy formatting. No excuses.
         </p>
-        <p className="text-text-dim text-base max-w-xl mx-auto mb-12">
+        <p className="text-text-dim text-base mx-auto mb-14 leading-relaxed">
           Your ideas are your number one advantage. JustWrite locks you in so
           you can finally get them out of your head and onto the page.
         </p>
@@ -176,15 +176,17 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Spacer */}
-      <div className="h-8" />
+      {/* Divider */}
+      <div className="max-w-3xl mx-auto px-6">
+        <div className="border-t border-border/50" />
+      </div>
 
       {/* How it works */}
-      <section id="how-it-works" className="px-6 md:px-16 py-24 max-w-5xl mx-auto">
-        <h2 className="text-3xl md:text-4xl font-serif text-center mb-20">
+      <section id="how-it-works" className="px-6 py-36 max-w-4xl mx-auto">
+        <h2 className="text-3xl md:text-4xl font-serif text-center mb-24">
           Three steps. That&apos;s it.
         </h2>
-        <div className="grid md:grid-cols-3 gap-16">
+        <div className="grid md:grid-cols-3 gap-20">
           {[
             {
               step: "01",
@@ -194,61 +196,63 @@ export default function LandingPage() {
             {
               step: "02",
               title: "Write",
-              desc: "The app goes fullscreen. No tabs. No notifications. No distractions. Just a blank page and your words. Pick small, medium, or large text — that's the only choice you need to make.",
+              desc: "The app goes fullscreen. No tabs. No notifications. No distractions. Just a blank page and your words.",
             },
             {
               step: "03",
               title: "Ship",
-              desc: "When the timer ends, your session is done. Your words are saved. Do it again tomorrow. Build the habit. Finish the book before it's too late.",
+              desc: "When the timer ends, your session is done. Your words are saved. Do it again tomorrow. Build the habit.",
             },
           ].map((item) => (
             <div key={item.step} className="text-center">
-              <div className="font-mono text-accent text-4xl mb-4">{item.step}</div>
-              <h3 className="font-mono text-lg mb-3">{item.title}</h3>
-              <p className="text-text-muted text-sm leading-relaxed">{item.desc}</p>
+              <div className="font-mono text-accent text-4xl mb-6">{item.step}</div>
+              <h3 className="font-mono text-lg mb-4">{item.title}</h3>
+              <p className="text-text-muted text-sm leading-loose">{item.desc}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Spacer */}
-      <div className="h-12" />
+      {/* Divider */}
+      <div className="max-w-3xl mx-auto px-6">
+        <div className="border-t border-border/50" />
+      </div>
 
       {/* Attention holder */}
-      <section className="px-6 md:px-16 py-24 max-w-4xl mx-auto">
-        <div className="grid md:grid-cols-2 gap-16 items-center">
+      <section className="px-6 py-36 max-w-4xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-20 items-center">
           <div>
-            <h2 className="text-2xl md:text-3xl font-serif mb-6">
+            <h2 className="text-2xl md:text-3xl font-serif mb-8 leading-snug">
               Every app fights for your attention.
               <br />
               <span className="text-accent">This one protects it.</span>
             </h2>
-            <p className="text-text-muted leading-relaxed mb-4">
+            <p className="text-text-muted leading-loose mb-6">
               Social media, notifications, infinite feeds &mdash; the modern world is
               an attention-draining machine. Your focus is being stolen every
               single day.
             </p>
-            <p className="text-text leading-relaxed font-medium">
+            <p className="text-text leading-loose font-medium">
               JustWrite is an attention holder. It locks you in with your own
               thoughts, blocks everything else out, and gives your ideas the
               uninterrupted time they deserve.
             </p>
           </div>
-          <div className="border border-border rounded-lg p-8 bg-bg-card card-elevated">
-            <div className="space-y-6">
-              <div className="flex items-start gap-4">
+          <div className="border border-border rounded-lg p-10 bg-bg-card card-elevated">
+            <div className="space-y-8">
+              <div className="flex items-start gap-5">
                 <div className="font-mono text-danger text-xl leading-none mt-1">&times;</div>
                 <div>
-                  <div className="font-mono text-sm mb-1 text-text-muted">Attention drainers</div>
-                  <p className="text-text-dim text-sm">Social media, notifications, infinite scroll, clickbait, autoplay videos</p>
+                  <div className="font-mono text-sm mb-2 text-text-muted">Attention drainers</div>
+                  <p className="text-text-dim text-sm leading-relaxed">Social media, notifications, infinite scroll, clickbait, autoplay videos</p>
                 </div>
               </div>
               <div className="border-t border-border" />
-              <div className="flex items-start gap-4">
+              <div className="flex items-start gap-5">
                 <div className="font-mono text-accent text-xl leading-none mt-1">&#10003;</div>
                 <div>
-                  <div className="font-mono text-sm mb-1 text-text">JustWrite &mdash; Attention holder</div>
-                  <p className="text-text-muted text-sm">Fullscreen focus, blocked distractions, timed sessions, your ideas on the page</p>
+                  <div className="font-mono text-sm mb-2 text-text">JustWrite &mdash; Attention holder</div>
+                  <p className="text-text-muted text-sm leading-relaxed">Fullscreen focus, blocked distractions, timed sessions, your ideas on the page</p>
                 </div>
               </div>
             </div>
@@ -256,79 +260,83 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Spacer */}
-      <div className="h-12" />
+      {/* Divider */}
+      <div className="max-w-3xl mx-auto px-6">
+        <div className="border-t border-border/50" />
+      </div>
 
       {/* Your ideas are your advantage */}
-      <section className="px-6 md:px-16 py-24 max-w-3xl mx-auto text-center">
-        <div className="border border-border rounded-lg p-10 md:p-14 bg-bg-card card-elevated">
-          <h2 className="text-2xl md:text-3xl font-serif mb-8">
-            Your ideas are your #1 advantage.
-            <br />
-            <span className="text-text-muted">Don&apos;t let them die in your head.</span>
-          </h2>
-          <p className="text-text-muted leading-relaxed mb-5">
-            Everyone&apos;s got a book in them. A journal they keep meaning to start.
-            A story that&apos;s been bouncing around their head for years.
-            The ideas are there. The words are there. What&apos;s missing is the space to get them out.
-          </p>
-          <p className="text-text-muted leading-relaxed mb-5">
-            You don&apos;t need AI to write your story. You don&apos;t need a
-            co-pilot. You need uninterrupted time with your own thoughts.
-            That&apos;s what makes your writing yours.
-          </p>
-          <p className="text-text leading-relaxed font-medium">
-            JustWrite removes every distraction, locks you in, and lets you
-            build the one habit that actually ships books: sitting down and writing.
-          </p>
-        </div>
+      <section className="px-6 py-36 max-w-2xl mx-auto text-center">
+        <h2 className="text-2xl md:text-3xl font-serif mb-10 leading-snug">
+          Your ideas are your #1 advantage.
+          <br />
+          <span className="text-text-muted">Don&apos;t let them die in your head.</span>
+        </h2>
+        <p className="text-text-muted leading-loose mb-6">
+          Everyone&apos;s got a book in them. A journal they keep meaning to start.
+          A story that&apos;s been bouncing around their head for years.
+          The ideas are there. The words are there. What&apos;s missing is the space to get them out.
+        </p>
+        <p className="text-text-muted leading-loose mb-6">
+          You don&apos;t need AI to write your story. You don&apos;t need a
+          co-pilot. You need uninterrupted time with your own thoughts.
+          That&apos;s what makes your writing yours.
+        </p>
+        <p className="text-text leading-loose font-medium">
+          JustWrite removes every distraction, locks you in, and lets you
+          build the one habit that actually ships books: sitting down and writing.
+        </p>
       </section>
 
-      {/* Spacer */}
-      <div className="h-12" />
+      {/* Divider */}
+      <div className="max-w-3xl mx-auto px-6">
+        <div className="border-t border-border/50" />
+      </div>
 
       {/* Pricing */}
-      <section id="pricing" className="px-6 md:px-16 py-24 max-w-5xl mx-auto">
-        <h2 className="text-3xl md:text-4xl font-serif text-center mb-5">
+      <section id="pricing" className="px-6 py-36 max-w-5xl mx-auto">
+        <h2 className="text-3xl md:text-4xl font-serif text-center mb-6">
           Simple pricing
         </h2>
-        <p className="text-text-muted text-center mb-20 max-w-md mx-auto">
+        <p className="text-text-muted text-center mb-24 max-w-md mx-auto leading-relaxed">
           Start for free. Upgrade when you&apos;re ready to commit.
         </p>
-        <div className="grid md:grid-cols-3 gap-8 items-start">
+        <div className="grid md:grid-cols-3 gap-10 items-start">
           <PricingCard plan={PLANS.free} type="free" />
           <PricingCard plan={PLANS.cloud} type="cloud" popular />
           <PricingCard plan={PLANS.desktop} type="desktop" />
         </div>
       </section>
 
-      {/* Spacer */}
-      <div className="h-12" />
+      {/* Divider */}
+      <div className="max-w-3xl mx-auto px-6">
+        <div className="border-t border-border/50" />
+      </div>
 
       {/* Final CTA */}
-      <section className="px-6 md:px-16 py-24 max-w-3xl mx-auto text-center">
-        <h2 className="text-3xl md:text-4xl font-serif mb-6">
+      <section className="px-6 py-36 max-w-2xl mx-auto text-center">
+        <h2 className="text-3xl md:text-4xl font-serif mb-8">
           Your book isn&apos;t going to write itself.
         </h2>
-        <p className="text-text-muted mb-10">
+        <p className="text-text-muted mb-12 leading-loose">
           Stop planning. Stop researching. Stop overthinking.
           Open JustWrite, set the timer, and start putting words on the page.
         </p>
         <Link
           href="/dashboard"
-          className="inline-block bg-accent text-white px-8 py-4 rounded font-mono text-lg hover:bg-accent-hover transition-colors"
+          className="inline-block bg-accent text-white px-8 py-4 rounded font-mono text-lg hover:bg-accent-hover transition-colors pulse-glow"
         >
           Start Writing Now
         </Link>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border px-6 md:px-16 py-10 max-w-6xl mx-auto mt-8">
+      <footer className="border-t border-border px-6 py-12 max-w-5xl mx-auto mt-8">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="font-mono text-sm text-text-dim">
             <span className="text-accent">Just</span>Write &copy; {new Date().getFullYear()}
           </div>
-          <div className="flex gap-6 text-sm text-text-dim font-mono">
+          <div className="flex gap-8 text-sm text-text-dim font-mono">
             <Link href="#pricing" className="hover:text-text transition-colors">
               Pricing
             </Link>

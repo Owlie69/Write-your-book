@@ -48,6 +48,24 @@ const DISSUASIVE_MESSAGES = [
   { title: "The resistance is lying to you.", body: "That voice telling you to stop? It's the same one that's kept your book unfinished. Ignore it. Write." },
 ];
 
+// ~3000 chars per A4 page — split content into pages
+const CHARS_PER_A4 = 3000;
+
+function splitIntoPages(content: string): string[] {
+  if (!content) return [""];
+  const pages: string[] = [];
+  let remaining = content;
+  while (remaining.length > CHARS_PER_A4) {
+    // Try to break at a newline near the limit
+    let breakAt = remaining.lastIndexOf("\n", CHARS_PER_A4);
+    if (breakAt < CHARS_PER_A4 * 0.7) breakAt = CHARS_PER_A4;
+    pages.push(remaining.slice(0, breakAt));
+    remaining = remaining.slice(breakAt).replace(/^\n/, "");
+  }
+  pages.push(remaining);
+  return pages;
+}
+
 export default function WritePage() {
   const params = useParams();
   const router = useRouter();
@@ -67,6 +85,11 @@ export default function WritePage() {
   const [sessionStats, setSessionStats] = useState<SessionStats | null>(null);
   const [showDissuasive, setShowDissuasive] = useState(false);
   const [dissuasiveMsg, setDissuasiveMsg] = useState(DISSUASIVE_MESSAGES[0]);
+
+  // Pagination state
+  const [pages, setPages] = useState<string[]>([""]);
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const [flippingForward, setFlippingForward] = useState(false);
 
   // Next session scheduler
   const [nextSessionDate, setNextSessionDate] = useState("");
@@ -102,6 +125,10 @@ export default function WritePage() {
       startWordCountRef.current = wc;
       prevWordCountRef.current = wc;
       peakWordCountRef.current = wc;
+      // Init pages
+      const initialPages = splitIntoPages(found.content);
+      setPages(initialPages);
+      setCurrentPageIndex(initialPages.length - 1);
     }
   }, [fileId]);
 
@@ -295,24 +322,29 @@ export default function WritePage() {
   }
 
   function handleContentChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
-    const content = e.target.value;
+    const pageContent = e.target.value;
+
+    // Build full content by replacing current page
+    const newPages = [...pages];
+    newPages[currentPageIndex] = pageContent;
+    const fullContent = newPages.join("\n");
 
     if (plan === "free") {
-      const pages = calculatePageCount(content);
-      if (!canAddPages(pages, plan)) {
+      const pageCount = calculatePageCount(fullContent);
+      if (!canAddPages(pageCount, plan)) {
         return;
       }
     }
 
-    const lenDiff = content.length - prevContentLenRef.current;
+    const lenDiff = fullContent.length - prevContentLenRef.current;
     if (lenDiff > 0) {
       totalCharsTypedRef.current += lenDiff;
     } else if (lenDiff < 0) {
       totalCharsDeletedRef.current += Math.abs(lenDiff);
     }
-    prevContentLenRef.current = content.length;
+    prevContentLenRef.current = fullContent.length;
 
-    const wc = content.split(/\s+/).filter(Boolean).length;
+    const wc = fullContent.split(/\s+/).filter(Boolean).length;
     const wcDiff = wc - prevWordCountRef.current;
     if (wcDiff > 0) {
       totalWordsAddedRef.current += wcDiff;
@@ -325,9 +357,39 @@ export default function WritePage() {
       peakWordCountRef.current = wc;
     }
 
-    contentRef.current = content;
+    contentRef.current = fullContent;
+    setPages(newPages);
     setWordCount(wc);
     setSessionWordCount(wc - startWordCountRef.current);
+
+    // Auto-flip to new page when current page is full
+    if (pageContent.length >= CHARS_PER_A4) {
+      const overflow = pageContent.slice(CHARS_PER_A4);
+      newPages[currentPageIndex] = pageContent.slice(0, CHARS_PER_A4);
+      const nextIdx = currentPageIndex + 1;
+      if (nextIdx >= newPages.length) {
+        newPages.push(overflow);
+      } else {
+        newPages[nextIdx] = overflow + newPages[nextIdx];
+      }
+      setPages([...newPages]);
+      setFlippingForward(true);
+      setCurrentPageIndex(nextIdx);
+      setTimeout(() => {
+        setFlippingForward(false);
+        textareaRef.current?.focus();
+        if (textareaRef.current) {
+          textareaRef.current.selectionStart = overflow.length;
+          textareaRef.current.selectionEnd = overflow.length;
+        }
+      }, 600);
+    }
+  }
+
+  function goToPage(idx: number) {
+    if (idx < 0 || idx >= pages.length) return;
+    setCurrentPageIndex(idx);
+    setTimeout(() => textareaRef.current?.focus(), 50);
   }
 
   function handleTextSizeChange(size: TextSize) {
@@ -508,15 +570,16 @@ export default function WritePage() {
     );
   }
 
-  // ---- WRITING SCREEN (LOCKED IN) — Word-like paper UI ----
+  // ---- WRITING SCREEN (LOCKED IN) — paginated A4 paper ----
   if (editorState === "writing") {
     const progress = 1 - timeLeft / (sessionMinutes * 60);
     const isLowTime = timeLeft <= 60;
-    const currentPages = calculatePageCount(contentRef.current);
+    const totalPagesCount = pages.length;
+    const hasPrev = currentPageIndex > 0;
 
     return (
       <div className="fixed inset-0 bg-bg-warm z-50 flex flex-col editor-page-container">
-        {/* Dissuasive overlay when user exits fullscreen */}
+        {/* Dissuasive overlay */}
         {showDissuasive && (
           <div className="fixed inset-0 z-[100] dissuasive-overlay flex items-center justify-center px-6">
             <div className="w-full max-w-md text-center fade-in">
@@ -548,29 +611,16 @@ export default function WritePage() {
 
         {/* Top bar */}
         <div className="flex items-center justify-between px-6 py-3 border-b border-border/50">
-          <div className="flex items-center gap-4">
-            <span className="font-mono text-sm text-text-dim">{file.title}</span>
-          </div>
+          <span className="font-mono text-sm text-text-dim">{file.title}</span>
 
-          {/* Timer */}
-          <div
-            className={`font-mono text-lg ${
-              isLowTime ? "text-danger" : "text-accent"
-            }`}
-          >
+          <div className={`font-mono text-lg ${isLowTime ? "text-danger" : "text-accent"}`}>
             {formatTime(timeLeft)}
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Save indicator */}
             <span className="text-xs font-mono text-text-dim">
-              {isSaving
-                ? "Saving..."
-                : lastSaved
-                ? `Saved ${lastSaved.toLocaleTimeString()}`
-                : ""}
+              {isSaving ? "Saving..." : lastSaved ? `Saved ${lastSaved.toLocaleTimeString()}` : ""}
             </span>
-            {/* Text size toggle */}
             <div className="flex items-center gap-1">
               {(Object.entries(TEXT_SIZES) as [TextSize, { label: string; class: string }][]).map(
                 ([key, value]) => (
@@ -578,9 +628,7 @@ export default function WritePage() {
                     key={key}
                     onClick={() => handleTextSizeChange(key)}
                     className={`w-7 h-7 rounded text-xs font-mono transition-colors ${
-                      settings.textSize === key
-                        ? "bg-accent/20 text-accent"
-                        : "text-text-dim hover:text-text-muted"
+                      settings.textSize === key ? "bg-accent/20 text-accent" : "text-text-dim hover:text-text-muted"
                     }`}
                   >
                     {value.label}
@@ -588,7 +636,6 @@ export default function WritePage() {
                 )
               )}
             </div>
-            {/* Theme toggle */}
             <button
               onClick={toggleTheme}
               className="theme-toggle"
@@ -608,40 +655,82 @@ export default function WritePage() {
           />
         </div>
 
-        {/* Writing area — Word-like paper in center */}
-        <div className="flex-1 overflow-auto py-8 px-4">
-          <div className="max-w-[750px] mx-auto">
-            {/* Paper page */}
-            <div className="paper-page page-flip-in min-h-[900px] px-16 py-12">
+        {/* Page area — centered with optional ghost of previous page */}
+        <div className="flex-1 overflow-hidden flex items-center justify-center py-8">
+          <div className="relative flex items-center justify-center w-full h-full">
+
+            {/* Ghost of previous page — left side, faded */}
+            {hasPrev && (
+              <div
+                className="absolute a4-page paper-page ghost-page cursor-pointer"
+                style={{ right: "calc(50% + 360px + 32px)" }}
+                onClick={() => goToPage(currentPageIndex - 1)}
+                title="Go to previous page"
+              >
+                <div
+                  className={`writing-area w-full h-full bg-transparent text-text font-serif pointer-events-none select-none overflow-hidden ${TEXT_SIZES[settings.textSize].class}`}
+                  style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}
+                >
+                  {pages[currentPageIndex - 1]}
+                </div>
+              </div>
+            )}
+
+            {/* Current page — centered */}
+            <div
+              className={`a4-page paper-page ${flippingForward ? "page-flip-in" : ""}`}
+            >
               <textarea
                 ref={textareaRef}
-                defaultValue={file.content}
+                value={pages[currentPageIndex] ?? ""}
                 onChange={handleContentChange}
-                placeholder="Start writing..."
+                placeholder={currentPageIndex === 0 ? "Start writing..." : ""}
                 className={`writing-area w-full h-full bg-transparent text-text resize-none font-serif ${TEXT_SIZES[settings.textSize].class}`}
-                style={{ minHeight: "840px" }}
                 spellCheck
                 autoFocus
               />
             </div>
 
-            {/* Page number */}
-            <div className="text-center mt-4 mb-8">
-              <span className="text-text-dim text-xs font-mono">
-                Page {currentPages || 1}
-              </span>
-            </div>
+            {/* Arrow nav — left */}
+            {hasPrev && (
+              <button
+                onClick={() => goToPage(currentPageIndex - 1)}
+                className="absolute left-4 text-text-dim hover:text-accent transition-colors font-mono text-2xl"
+                title="Previous page"
+              >
+                &#8592;
+              </button>
+            )}
+            {/* Arrow nav — right (only if there's a next page already) */}
+            {currentPageIndex < pages.length - 1 && (
+              <button
+                onClick={() => goToPage(currentPageIndex + 1)}
+                className="absolute right-4 text-text-dim hover:text-accent transition-colors font-mono text-2xl"
+                title="Next page"
+              >
+                &#8594;
+              </button>
+            )}
           </div>
         </div>
 
         {/* Bottom bar */}
         <div className="flex items-center justify-between px-6 py-2 border-t border-border/50 text-xs font-mono text-text-dim">
           <span>{wordCount} words total</span>
-          <span>+{sessionWordCount} this session</span>
-          <span>
-            {currentPages}
-            {plan === "free" ? ` / ${FREE_MAX_PAGES}` : ""} pages
+          <span className="flex items-center gap-3">
+            <button
+              onClick={() => goToPage(currentPageIndex - 1)}
+              disabled={!hasPrev}
+              className="disabled:opacity-20 hover:text-accent transition-colors"
+            >&#8592;</button>
+            Page {currentPageIndex + 1} / {totalPagesCount}
+            <button
+              onClick={() => goToPage(currentPageIndex + 1)}
+              disabled={currentPageIndex >= pages.length - 1}
+              className="disabled:opacity-20 hover:text-accent transition-colors"
+            >&#8594;</button>
           </span>
+          <span>+{sessionWordCount} this session</span>
         </div>
       </div>
     );
