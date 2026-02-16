@@ -25,133 +25,261 @@
   --font-serif: "Georgia", "Times New Roman", serif;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* ============================================
+   All custom styles inside @layer base so
+   Tailwind utilities can override them properly.
+   ============================================ */
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-serif);
+  }
+
+  body {
+    min-height: 100vh;
+    background-color: var(--color-bg);
+  }
+
+  /* ======== Dark theme overrides ======== */
+  html[data-theme="dark"] {
+    --color-bg: #1a1a1a;
+    --color-bg-warm: #1e1c1a;
+    --color-bg-card: #2a2725;
+    --color-bg-card-hover: #332f2b;
+    --color-bg-input: #252220;
+    --color-text: #e8e0d6;
+    --color-text-muted: #9a918a;
+    --color-text-dim: #6b6460;
+    --color-accent: #c8a87c;
+    --color-accent-hover: #d4b88e;
+    --color-accent-dim: #8a7350;
+    --color-border: #3a3530;
+    --color-border-focus: #c8a87c;
+    --color-danger: #c75050;
+    --color-success: #5a9a5a;
+    --color-paper: #2a2725;
+    --color-paper-shadow: rgba(0, 0, 0, 0.3);
+    --color-overlay-bg: rgba(26, 26, 26, 0.92);
+  }
+
+  ::selection {
+    background-color: var(--color-accent);
+    color: white;
+  }
+
+  html[data-theme="dark"] ::selection {
+    color: var(--color-bg);
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-bg);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-text-dim);
+  }
 }
 
-html {
-  background-color: var(--color-bg);
-  color: var(--color-text);
-  font-family: var(--font-serif);
+/* ============================================
+   Component styles inside @layer components
+   ============================================ */
+@layer components {
+  /* Writing editor */
+  .writing-area {
+    caret-color: var(--color-accent);
+    line-height: 1.8;
+    letter-spacing: 0.02em;
+    height: 100%;
+  }
+
+  .writing-area:focus {
+    outline: none;
+  }
+
+  .writing-area::placeholder {
+    color: var(--color-text-dim);
+    font-style: italic;
+  }
+
+  /* Typewriter cursor blink */
+  .cursor-blink {
+    animation: blink 1s infinite;
+  }
+
+  /* Page texture overlay */
+  .paper-texture {
+    background-image:
+      radial-gradient(ellipse at 20% 50%, rgba(184, 134, 11, 0.03) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 50%, rgba(184, 134, 11, 0.02) 0%, transparent 50%);
+  }
+
+  html[data-theme="dark"] .paper-texture {
+    background-image:
+      radial-gradient(ellipse at 20% 50%, rgba(200, 168, 124, 0.03) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 50%, rgba(200, 168, 124, 0.02) 0%, transparent 50%);
+  }
+
+  /* Lock screen overlay */
+  .lock-overlay {
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  /* Fade in */
+  .fade-in {
+    animation: fadeIn 0.5s ease-out;
+  }
+
+  /* Pulse glow for CTA */
+  .pulse-glow {
+    animation: pulseGlow 2s ease-in-out infinite;
+  }
+
+  html[data-theme="dark"] .pulse-glow {
+    animation: pulseGlowDark 2s ease-in-out infinite;
+  }
+
+  /* Text sizes for the editor */
+  .text-size-small { font-size: 14px; }
+  .text-size-medium { font-size: 18px; }
+  .text-size-large { font-size: 22px; }
+
+  /* ======== Word-like paper pages ======== */
+  .paper-page {
+    background: var(--color-paper);
+    box-shadow:
+      0 1px 3px var(--color-paper-shadow),
+      0 4px 12px var(--color-paper-shadow);
+    border-radius: 2px;
+    position: relative;
+  }
+
+  .paper-page::before {
+    content: "";
+    position: absolute;
+    left: 72px;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: rgba(184, 134, 11, 0.10);
+    pointer-events: none;
+  }
+
+  html[data-theme="dark"] .paper-page::before {
+    background: rgba(200, 168, 124, 0.08);
+  }
+
+  /* Page flip animation */
+  .page-flip-in {
+    animation: pageFlipIn 0.6s ease-out;
+  }
+
+  /* Editor page container */
+  .editor-page-container {
+    background: var(--color-bg-warm);
+    min-height: 100%;
+  }
+
+  /* Dissuasive overlay */
+  .dissuasive-overlay {
+    animation: overlayFadeIn 0.3s ease-out;
+    background: var(--color-overlay-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  /* ======== A4 page dimensions ======== */
+  .a4-page {
+    width: 680px;
+    height: 960px;
+    padding: 64px 72px 64px 88px;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
+  @media (max-width: 768px) {
+    .a4-page {
+      width: 100%;
+      max-width: 520px;
+      height: auto;
+      min-height: 700px;
+      padding: 40px 32px 40px 44px;
+    }
+  }
+
+  /* Ghost (previous) page */
+  .ghost-page {
+    opacity: 0.15;
+    transform: scale(0.88);
+    transform-origin: right center;
+    pointer-events: auto;
+    transition: opacity 0.3s, transform 0.3s;
+  }
+
+  .ghost-page:hover {
+    opacity: 0.30;
+    transform: scale(0.90);
+  }
+
+  /* Theme toggle button */
+  .theme-toggle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-card);
+    color: var(--color-text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 16px;
+  }
+
+  .theme-toggle:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+
+  /* Card shadow for light theme */
+  .card-elevated {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04);
+  }
+
+  html[data-theme="dark"] .card-elevated {
+    box-shadow: none;
+  }
 }
 
-body {
-  min-height: 100vh;
-  background-color: var(--color-bg);
-}
-
-/* ======== Dark theme overrides ======== */
-html[data-theme="dark"] {
-  --color-bg: #1a1a1a;
-  --color-bg-warm: #1e1c1a;
-  --color-bg-card: #2a2725;
-  --color-bg-card-hover: #332f2b;
-  --color-bg-input: #252220;
-  --color-text: #e8e0d6;
-  --color-text-muted: #9a918a;
-  --color-text-dim: #6b6460;
-  --color-accent: #c8a87c;
-  --color-accent-hover: #d4b88e;
-  --color-accent-dim: #8a7350;
-  --color-border: #3a3530;
-  --color-border-focus: #c8a87c;
-  --color-danger: #c75050;
-  --color-success: #5a9a5a;
-  --color-paper: #2a2725;
-  --color-paper-shadow: rgba(0, 0, 0, 0.3);
-  --color-overlay-bg: rgba(26, 26, 26, 0.92);
-}
-
-::selection {
-  background-color: var(--color-accent);
-  color: white;
-}
-
-html[data-theme="dark"] ::selection {
-  color: var(--color-bg);
-}
-
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-}
-::-webkit-scrollbar-track {
-  background: var(--color-bg);
-}
-::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-dim);
-}
-
-/* Writing editor specific */
-.writing-area {
-  caret-color: var(--color-accent);
-  line-height: 1.8;
-  letter-spacing: 0.02em;
-  height: 100%;
-}
-
-.writing-area:focus {
-  outline: none;
-}
-
-.writing-area::placeholder {
-  color: var(--color-text-dim);
-  font-style: italic;
-}
-
-/* Typewriter cursor blink */
+/* ============================================
+   Keyframes (outside layers, no cascade issue)
+   ============================================ */
 @keyframes blink {
   0%, 50% { opacity: 1; }
   51%, 100% { opacity: 0; }
 }
 
-.cursor-blink {
-  animation: blink 1s infinite;
-}
-
-/* Page texture overlay */
-.paper-texture {
-  background-image:
-    radial-gradient(ellipse at 20% 50%, rgba(184, 134, 11, 0.03) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 50%, rgba(184, 134, 11, 0.02) 0%, transparent 50%);
-}
-
-html[data-theme="dark"] .paper-texture {
-  background-image:
-    radial-gradient(ellipse at 20% 50%, rgba(200, 168, 124, 0.03) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 50%, rgba(200, 168, 124, 0.02) 0%, transparent 50%);
-}
-
-/* Lock screen overlay */
-.lock-overlay {
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-}
-
-/* Fade in */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.fade-in {
-  animation: fadeIn 0.5s ease-out;
-}
-
-/* Pulse glow for CTA */
 @keyframes pulseGlow {
   0%, 100% { box-shadow: 0 0 5px rgba(184, 134, 11, 0.2); }
   50% { box-shadow: 0 0 20px rgba(184, 134, 11, 0.4); }
-}
-
-html[data-theme="dark"] .pulse-glow {
-  animation: pulseGlowDark 2s ease-in-out infinite;
 }
 
 @keyframes pulseGlowDark {
@@ -159,41 +287,6 @@ html[data-theme="dark"] .pulse-glow {
   50% { box-shadow: 0 0 20px rgba(200, 168, 124, 0.4); }
 }
 
-.pulse-glow {
-  animation: pulseGlow 2s ease-in-out infinite;
-}
-
-/* Text sizes for the editor */
-.text-size-small { font-size: 14px; }
-.text-size-medium { font-size: 18px; }
-.text-size-large { font-size: 22px; }
-
-/* ======== Word-like paper pages ======== */
-.paper-page {
-  background: var(--color-paper);
-  box-shadow:
-    0 1px 3px var(--color-paper-shadow),
-    0 4px 12px var(--color-paper-shadow);
-  border-radius: 2px;
-  position: relative;
-}
-
-.paper-page::before {
-  content: "";
-  position: absolute;
-  left: 72px;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: rgba(184, 134, 11, 0.10);
-  pointer-events: none;
-}
-
-html[data-theme="dark"] .paper-page::before {
-  background: rgba(200, 168, 124, 0.08);
-}
-
-/* Page flip animation */
 @keyframes pageFlipIn {
   0% {
     transform: perspective(1200px) rotateY(-90deg);
@@ -207,89 +300,7 @@ html[data-theme="dark"] .paper-page::before {
   }
 }
 
-.page-flip-in {
-  animation: pageFlipIn 0.6s ease-out;
-}
-
-/* Writing editor page container */
-.editor-page-container {
-  background: var(--color-bg-warm);
-  min-height: 100%;
-}
-
-/* Dissuasive overlay */
 @keyframes overlayFadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
-}
-
-.dissuasive-overlay {
-  animation: overlayFadeIn 0.3s ease-out;
-  background: var(--color-overlay-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-/* ======== A4 page dimensions ======== */
-/* Fixed A4-proportioned page: 25 lines at 1.8 line-height */
-.a4-page {
-  width: 680px;
-  height: 960px;
-  padding: 64px 72px 64px 88px;
-  flex-shrink: 0;
-  overflow: hidden;
-}
-
-@media (max-width: 768px) {
-  .a4-page {
-    width: 100%;
-    max-width: 520px;
-    height: auto;
-    min-height: 700px;
-    padding: 40px 32px 40px 44px;
-  }
-}
-
-/* Ghost (previous) page — faded, scaled down */
-.ghost-page {
-  opacity: 0.15;
-  transform: scale(0.88);
-  transform-origin: right center;
-  pointer-events: auto;
-  transition: opacity 0.3s, transform 0.3s;
-}
-
-.ghost-page:hover {
-  opacity: 0.30;
-  transform: scale(0.90);
-}
-
-/* Theme toggle button */
-.theme-toggle {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 1px solid var(--color-border);
-  background: var(--color-bg-card);
-  color: var(--color-text-muted);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 16px;
-}
-
-.theme-toggle:hover {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-}
-
-/* Card shadow for light theme */
-.card-elevated {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04);
-}
-
-html[data-theme="dark"] .card-elevated {
-  box-shadow: none;
 }

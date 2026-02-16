@@ -3,10 +3,10 @@ import "./globals.css";
 import { ThemeProvider } from "@/lib/theme-context";
 
 export const metadata: Metadata = {
-  title: "JustWrite — Lock in. Write. Ship.",
+  title: "JustWrite — Take back your focus.",
   description:
-    "A distraction-free writing tool that locks you in so you can finally finish what you started. No AI. No excuses. Just your words.",
-  keywords: ["writing", "focus", "distraction-free", "book", "journal", "habit"],
+    "A distraction-free writing tool that locks you in so you can focus. Go fullscreen, set a timer, and write without interruptions. No AI. No distractions. Just your thoughts.",
+  keywords: ["writing", "focus", "distraction-free", "attention", "deep work", "productivity"],
 };
 
 export default function RootLayout({

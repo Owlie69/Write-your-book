@@ -105,7 +105,7 @@ function PricingCard({
             : "border border-border hover:border-accent hover:text-accent"
         }`}
       >
-        {type === "free" ? "Start Writing" : "Get Started"}
+        {type === "free" ? "Start Free" : "Get Started"}
       </Link>
     </div>
   );
@@ -115,7 +115,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-bg paper-texture">
       {/* Nav */}
-      <nav className="flex items-center justify-between px-6 md:px-16 py-6 max-w-5xl mx-auto">
+      <nav className="flex items-center justify-between px-6 py-6 max-w-5xl mx-auto">
         <Link href="/" className="font-mono text-xl tracking-tight">
           <span className="text-accent">Just</span>Write
         </Link>
@@ -145,27 +145,25 @@ export default function LandingPage() {
       {/* Hero */}
       <section className="px-6 py-36 md:py-52 max-w-3xl mx-auto text-center fade-in">
         <h1 className="text-4xl md:text-6xl font-serif leading-tight mb-10">
-          Lock in.
+          Take back your{" "}
+          <TypingEffect words={["focus", "attention", "flow", "clarity", "time"]} />
           <br />
-          Write your{" "}
-          <TypingEffect words={["book", "journal", "story", "memoir", "thesis"]} />
-          <br />
-          Ship it.
+          and start writing.
         </h1>
         <p className="text-text-muted text-lg md:text-xl mx-auto mb-6 leading-relaxed">
-          In a world designed to drain your attention, this is the tool that holds it.
-          No AI writing for you. No fancy formatting. No excuses.
+          Every app fights for your attention. JustWrite protects it.
+          Go fullscreen, set a timer, and write without distractions.
         </p>
         <p className="text-text-dim text-base mx-auto mb-14 leading-relaxed">
-          Your ideas are your number one advantage. JustWrite locks you in so
-          you can finally get them out of your head and onto the page.
+          No AI writing for you. No fancy formatting. No notifications.
+          Just a blank page and your uninterrupted thoughts.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
             href="/dashboard"
             className="bg-accent text-white px-8 py-4 rounded font-mono text-lg hover:bg-accent-hover transition-colors pulse-glow"
           >
-            Start Writing — It&apos;s Free
+            Start Focusing — It&apos;s Free
           </Link>
           <Link
             href="#how-it-works"
@@ -195,13 +193,13 @@ export default function LandingPage() {
             },
             {
               step: "02",
-              title: "Write",
-              desc: "The app goes fullscreen. No tabs. No notifications. No distractions. Just a blank page and your words.",
+              title: "Enter the zone",
+              desc: "The app goes fullscreen. No tabs. No notifications. No distractions. Just a blank page, a timer, and your thoughts.",
             },
             {
               step: "03",
-              title: "Ship",
-              desc: "When the timer ends, your session is done. Your words are saved. Do it again tomorrow. Build the habit.",
+              title: "Come out with words",
+              desc: "When the timer ends, your session is done. Your words are saved. Do it again tomorrow. Consistency beats motivation.",
             },
           ].map((item) => (
             <div key={item.step} className="text-center">
@@ -223,19 +221,18 @@ export default function LandingPage() {
         <div className="grid md:grid-cols-2 gap-20 items-center">
           <div>
             <h2 className="text-2xl md:text-3xl font-serif mb-8 leading-snug">
-              Every app fights for your attention.
+              Your attention is under attack.
               <br />
-              <span className="text-accent">This one protects it.</span>
+              <span className="text-accent">This is your shield.</span>
             </h2>
             <p className="text-text-muted leading-loose mb-6">
               Social media, notifications, infinite feeds &mdash; the modern world is
-              an attention-draining machine. Your focus is being stolen every
-              single day.
+              an attention-draining machine. Every minute you spend distracted is a
+              minute your ideas stay trapped in your head.
             </p>
             <p className="text-text leading-loose font-medium">
-              JustWrite is an attention holder. It locks you in with your own
-              thoughts, blocks everything else out, and gives your ideas the
-              uninterrupted time they deserve.
+              JustWrite locks you in with your own thoughts, blocks everything
+              else out, and gives your focus the uninterrupted time it deserves.
             </p>
           </div>
           <div className="border border-border rounded-lg p-10 bg-bg-card card-elevated">
@@ -252,7 +249,7 @@ export default function LandingPage() {
                 <div className="font-mono text-accent text-xl leading-none mt-1">&#10003;</div>
                 <div>
                   <div className="font-mono text-sm mb-2 text-text">JustWrite &mdash; Attention holder</div>
-                  <p className="text-text-muted text-sm leading-relaxed">Fullscreen focus, blocked distractions, timed sessions, your ideas on the page</p>
+                  <p className="text-text-muted text-sm leading-relaxed">Fullscreen focus, timed sessions, zero distractions, just you and the page</p>
                 </div>
               </div>
             </div>
@@ -265,26 +262,27 @@ export default function LandingPage() {
         <div className="border-t border-border/50" />
       </div>
 
-      {/* Your ideas are your advantage */}
+      {/* Deep focus section */}
       <section className="px-6 py-36 max-w-2xl mx-auto text-center">
         <h2 className="text-2xl md:text-3xl font-serif mb-10 leading-snug">
-          Your ideas are your #1 advantage.
+          Deep focus is a superpower.
           <br />
-          <span className="text-text-muted">Don&apos;t let them die in your head.</span>
+          <span className="text-text-muted">Most people have lost it.</span>
         </h2>
         <p className="text-text-muted leading-loose mb-6">
-          Everyone&apos;s got a book in them. A journal they keep meaning to start.
-          A story that&apos;s been bouncing around their head for years.
-          The ideas are there. The words are there. What&apos;s missing is the space to get them out.
+          The average person checks their phone 96 times a day.
+          Context-switching kills creativity. Shallow attention produces shallow work.
+          The ability to sit with your own thoughts for 20 uninterrupted minutes
+          is now a rare competitive advantage.
         </p>
         <p className="text-text-muted leading-loose mb-6">
-          You don&apos;t need AI to write your story. You don&apos;t need a
-          co-pilot. You need uninterrupted time with your own thoughts.
-          That&apos;s what makes your writing yours.
+          You don&apos;t need another productivity app. You don&apos;t need AI
+          to think for you. You need a locked room with no exit &mdash; until the timer
+          runs out.
         </p>
         <p className="text-text leading-loose font-medium">
-          JustWrite removes every distraction, locks you in, and lets you
-          build the one habit that actually ships books: sitting down and writing.
+          JustWrite removes every distraction and forces you into the deep focus
+          state where your best ideas come alive.
         </p>
       </section>
 
@@ -316,17 +314,17 @@ export default function LandingPage() {
       {/* Final CTA */}
       <section className="px-6 py-36 max-w-2xl mx-auto text-center">
         <h2 className="text-3xl md:text-4xl font-serif mb-8">
-          Your book isn&apos;t going to write itself.
+          Stop scrolling. Start focusing.
         </h2>
         <p className="text-text-muted mb-12 leading-loose">
-          Stop planning. Stop researching. Stop overthinking.
-          Open JustWrite, set the timer, and start putting words on the page.
+          Every day you wait is another day of fragmented attention and unfinished ideas.
+          Open JustWrite, set the timer, and give your thoughts the space they deserve.
         </p>
         <Link
           href="/dashboard"
           className="inline-block bg-accent text-white px-8 py-4 rounded font-mono text-lg hover:bg-accent-hover transition-colors pulse-glow"
         >
-          Start Writing Now
+          Lock In Now
         </Link>
       </section>
 
