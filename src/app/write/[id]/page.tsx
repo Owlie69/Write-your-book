@@ -473,7 +473,7 @@ export default function WritePage() {
           </p>
 
           {/* Timer setting */}
-          <div className="border border-border rounded-lg p-8 bg-bg-card card-elevated mb-8">
+          <div className="border border-border rounded-lg p-8 bg-bg-card card-elevated mb-12">
             <label className="block text-sm font-mono text-text-muted mb-5">
               Session Length
             </label>
@@ -503,33 +503,6 @@ export default function WritePage() {
             <p className="text-text-dim text-xs mt-4 font-mono">
               {canCustomize ? "minutes" : "minutes (upgrade to customize)"}
             </p>
-          </div>
-
-          {/* Text size */}
-          <div className="border border-border rounded-lg p-8 bg-bg-card card-elevated mb-12">
-            <label className="block text-sm font-mono text-text-muted mb-3">
-              Text Size
-            </label>
-            <p className="text-text-dim text-xs mb-6">
-              Pick a size that&apos;s comfortable.
-            </p>
-            <div className="flex items-center justify-center gap-4">
-              {(Object.entries(TEXT_SIZES) as [TextSize, { label: string; class: string }][]).map(
-                ([key, value]) => (
-                  <button
-                    key={key}
-                    onClick={() => handleTextSizeChange(key)}
-                    className={`w-14 h-14 rounded border font-mono text-lg transition-colors ${
-                      settings.textSize === key
-                        ? "border-accent bg-accent text-white"
-                        : "border-border hover:border-accent text-text-muted hover:text-accent"
-                    }`}
-                  >
-                    {value.label}
-                  </button>
-                )
-              )}
-            </div>
           </div>
 
           {/* Start button */}
@@ -619,6 +592,35 @@ export default function WritePage() {
                 )
               )}
             </div>
+            {plan !== "free" ? (
+              <button
+                onClick={() => {
+                  const blob = new Blob([contentRef.current], { type: "text/plain;charset=utf-8" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `${file.title.replace(/[^a-zA-Z0-9\s\-_]/g, "").trim() || "untitled"}.txt`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                }}
+                className="w-7 h-7 rounded text-xs font-mono text-text-dim hover:text-accent transition-colors flex items-center justify-center"
+                title="Download as .txt"
+                aria-label="Download file"
+              >
+                &#8615;
+              </button>
+            ) : (
+              <button
+                className="w-7 h-7 rounded text-xs font-mono text-text-dim opacity-40 cursor-not-allowed flex items-center justify-center"
+                title="Upgrade to Cloud to download files"
+                aria-label="Download unavailable on free plan"
+                disabled
+              >
+                &#8615;
+              </button>
+            )}
             <button
               onClick={toggleTheme}
               className="theme-toggle"
@@ -638,14 +640,14 @@ export default function WritePage() {
           />
         </div>
 
-        {/* Page area — scrollable, centered */}
+        {/* Page area — scrollable, current page always centered */}
         <div className="flex-1 overflow-auto flex items-start justify-center py-12 px-4">
-          <div className="flex items-start justify-center gap-8">
+          <div className="relative flex items-start justify-center">
 
-            {/* Ghost of previous page */}
+            {/* Ghost of previous page — positioned to the left, doesn't affect centering */}
             {hasPrev && (
               <div
-                className="a4-page paper-page ghost-page cursor-pointer hidden xl:block"
+                className="a4-page paper-page ghost-page cursor-pointer hidden xl:block absolute right-full mr-8"
                 onClick={() => goToPage(currentPageIndex - 1)}
                 title={`Go to page ${currentPageIndex}`}
               >
@@ -658,7 +660,7 @@ export default function WritePage() {
               </div>
             )}
 
-            {/* Current page */}
+            {/* Current page — always centered */}
             <div className={`a4-page paper-page ${pageFlipAnim ? "page-flip-in" : ""}`}>
               <textarea
                 ref={textareaRef}

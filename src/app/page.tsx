@@ -60,11 +60,21 @@ function PricingCard({
   plan,
   type,
   popular,
+  billing,
 }: {
   plan: (typeof PLANS)[keyof typeof PLANS];
   type: string;
   popular?: boolean;
+  billing: "yearly" | "monthly";
 }) {
+  // Monthly is 30% more expensive than the base (yearly) price
+  const displayPrice =
+    plan.price === 0
+      ? 0
+      : billing === "monthly"
+      ? Math.round(plan.price * 1.3 * 100) / 100
+      : plan.price;
+
   return (
     <div
       className={`relative rounded-lg border p-8 flex flex-col card-elevated ${
@@ -84,8 +94,11 @@ function PricingCard({
           <span className="text-3xl font-bold">Free</span>
         ) : (
           <>
-            <span className="text-3xl font-bold">&euro;{plan.price}</span>
-            <span className="text-text-muted">/month</span>
+            <span className="text-3xl font-bold">&euro;{displayPrice}</span>
+            <span className="text-text-muted">/{billing === "yearly" ? "mo" : "mo"}</span>
+            {billing === "yearly" && (
+              <div className="text-xs text-text-dim mt-1">billed yearly</div>
+            )}
           </>
         )}
       </div>
@@ -111,9 +124,14 @@ function PricingCard({
   );
 }
 
-function DesktopComingSoonCard() {
+function DesktopComingSoonCard({ billing }: { billing: "yearly" | "monthly" }) {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
+
+  const displayPrice =
+    billing === "monthly"
+      ? Math.round(PLANS.desktop.price * 1.3 * 100) / 100
+      : PLANS.desktop.price;
 
   function handleNotify(e: React.FormEvent) {
     e.preventDefault();
@@ -132,8 +150,11 @@ function DesktopComingSoonCard() {
       </div>
       <h3 className="font-mono text-xl mb-2">{PLANS.desktop.name}</h3>
       <div className="mb-6">
-        <span className="text-3xl font-bold">&euro;{PLANS.desktop.price}</span>
-        <span className="text-text-muted">/month</span>
+        <span className="text-3xl font-bold">&euro;{displayPrice}</span>
+        <span className="text-text-muted">/mo</span>
+        {billing === "yearly" && (
+          <div className="text-xs text-text-dim mt-1">billed yearly</div>
+        )}
       </div>
       <ul className="space-y-3 mb-8 flex-1">
         {PLANS.desktop.features.map((feature) => (
@@ -167,6 +188,63 @@ function DesktopComingSoonCard() {
         </form>
       )}
     </div>
+  );
+}
+
+function PricingSection() {
+  const [billing, setBilling] = useState<"yearly" | "monthly">("yearly");
+
+  return (
+    <section id="pricing" className="px-6 py-36 max-w-5xl mx-auto" aria-label="Pricing">
+      <h2 className="text-3xl md:text-4xl font-serif text-center mb-6">
+        Simple pricing
+      </h2>
+      <p className="text-text-muted text-center mb-10 max-w-md mx-auto leading-relaxed">
+        Start for free. Upgrade when you&apos;re ready to commit.
+      </p>
+
+      {/* Billing toggle */}
+      <div className="flex items-center justify-center gap-4 mb-20">
+        <span
+          className={`text-sm font-mono cursor-pointer transition-colors ${
+            billing === "yearly" ? "text-accent" : "text-text-dim"
+          }`}
+          onClick={() => setBilling("yearly")}
+        >
+          Yearly
+        </span>
+        <button
+          onClick={() => setBilling(billing === "yearly" ? "monthly" : "yearly")}
+          className="relative w-14 h-7 rounded-full border border-border bg-bg-input transition-colors"
+          aria-label="Toggle billing period"
+        >
+          <div
+            className={`absolute top-0.5 w-6 h-6 rounded-full bg-accent transition-all duration-200 ${
+              billing === "monthly" ? "left-7" : "left-0.5"
+            }`}
+          />
+        </button>
+        <span
+          className={`text-sm font-mono cursor-pointer transition-colors ${
+            billing === "monthly" ? "text-accent" : "text-text-dim"
+          }`}
+          onClick={() => setBilling("monthly")}
+        >
+          Monthly
+        </span>
+        {billing === "yearly" && (
+          <span className="text-xs font-mono text-success bg-success/10 px-2 py-1 rounded">
+            Save 30%
+          </span>
+        )}
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-10 items-start">
+        <PricingCard plan={PLANS.free} type="free" billing={billing} />
+        <PricingCard plan={PLANS.cloud} type="cloud" popular billing={billing} />
+        <DesktopComingSoonCard billing={billing} />
+      </div>
+    </section>
   );
 }
 
@@ -373,19 +451,7 @@ export default function LandingPage() {
         <div className="max-w-3xl mx-auto px-6"><div className="border-t border-border/50" /></div>
 
         {/* Pricing */}
-        <section id="pricing" className="px-6 py-36 max-w-5xl mx-auto" aria-label="Pricing">
-          <h2 className="text-3xl md:text-4xl font-serif text-center mb-6">
-            Simple pricing
-          </h2>
-          <p className="text-text-muted text-center mb-24 max-w-md mx-auto leading-relaxed">
-            Start for free. Upgrade when you&apos;re ready to commit.
-          </p>
-          <div className="grid md:grid-cols-3 gap-10 items-start">
-            <PricingCard plan={PLANS.free} type="free" />
-            <PricingCard plan={PLANS.cloud} type="cloud" popular />
-            <DesktopComingSoonCard />
-          </div>
-        </section>
+        <PricingSection />
 
         {/* Divider */}
         <div className="max-w-3xl mx-auto px-6"><div className="border-t border-border/50" /></div>

@@ -221,16 +221,16 @@
 
   /* Ghost (previous) page */
   .ghost-page {
-    opacity: 0.15;
-    transform: scale(0.88);
+    opacity: 0.35;
+    transform: scale(0.92);
     transform-origin: right center;
     pointer-events: auto;
     transition: opacity 0.3s, transform 0.3s;
   }
 
   .ghost-page:hover {
-    opacity: 0.30;
-    transform: scale(0.90);
+    opacity: 0.55;
+    transform: scale(0.94);
   }
 
   /* Theme toggle button */

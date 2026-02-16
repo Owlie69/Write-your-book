@@ -201,9 +201,10 @@ export default function DashboardPage() {
               const timeAgo = getTimeAgo(updated);
 
               return (
-                <div
+                <Link
                   key={file.id}
-                  className="border border-border rounded-lg p-8 bg-bg-card card-elevated hover:bg-bg-card-hover transition-colors group text-center"
+                  href={`/write/${file.id}`}
+                  className="block border border-border rounded-lg p-8 bg-bg-card card-elevated hover:bg-bg-card-hover hover:border-accent/40 transition-colors group text-center cursor-pointer"
                 >
                   <h3 className="font-mono text-xl mb-3">{file.title}</h3>
                   <div className="flex items-center justify-center gap-4 text-sm text-text-muted mb-4">
@@ -221,16 +222,15 @@ export default function DashboardPage() {
                       {file.content.length > 200 ? "..." : ""}
                     </p>
                   )}
-                  <div className="flex items-center justify-center gap-4">
-                    <Link
-                      href={`/write/${file.id}`}
+                  <div className="flex items-center justify-center gap-4" onClick={(e) => e.preventDefault()}>
+                    <span
                       className="bg-accent text-white px-6 py-2.5 rounded font-mono text-sm hover:bg-accent-hover transition-colors"
                     >
                       Write
-                    </Link>
+                    </span>
                     {plan !== "free" ? (
                       <button
-                        onClick={() => downloadFile(file)}
+                        onClick={(e) => { e.preventDefault(); downloadFile(file); }}
                         className="border border-border px-4 py-2.5 rounded font-mono text-xs text-text-muted hover:border-accent hover:text-accent transition-colors"
                         title="Download as .txt"
                       >
@@ -241,6 +241,7 @@ export default function DashboardPage() {
                         className="border border-border px-4 py-2.5 rounded font-mono text-xs text-text-dim cursor-not-allowed opacity-50"
                         title="Upgrade to download files"
                         disabled
+                        onClick={(e) => e.preventDefault()}
                       >
                         .txt
                       </button>
@@ -248,13 +249,13 @@ export default function DashboardPage() {
                     {deleteConfirm === file.id ? (
                       <div className="flex items-center gap-3">
                         <button
-                          onClick={() => handleDeleteFile(file.id)}
+                          onClick={(e) => { e.preventDefault(); handleDeleteFile(file.id); }}
                           className="text-danger text-sm font-mono hover:underline"
                         >
                           Confirm
                         </button>
                         <button
-                          onClick={() => setDeleteConfirm(null)}
+                          onClick={(e) => { e.preventDefault(); setDeleteConfirm(null); }}
                           className="text-text-dim text-sm font-mono hover:underline"
                         >
                           Cancel
@@ -262,14 +263,14 @@ export default function DashboardPage() {
                       </div>
                     ) : (
                       <button
-                        onClick={() => setDeleteConfirm(file.id)}
+                        onClick={(e) => { e.preventDefault(); setDeleteConfirm(file.id); }}
                         className="text-text-dim hover:text-danger text-sm font-mono transition-colors opacity-0 group-hover:opacity-100"
                       >
                         Delete
                       </button>
                     )}
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>
