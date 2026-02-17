@@ -77,9 +77,9 @@ function PricingCard({
 
   return (
     <div
-      className={`relative rounded-lg border p-8 flex flex-col card-elevated ${
+      className={`relative rounded-lg border p-5 sm:p-8 flex flex-col card-elevated ${
         popular
-          ? "border-accent bg-bg-card scale-105"
+          ? "border-accent bg-bg-card sm:scale-105"
           : "border-border bg-bg-card/80"
       }`}
     >
@@ -144,7 +144,7 @@ function DesktopComingSoonCard({ billing }: { billing: "yearly" | "monthly" }) {
   }
 
   return (
-    <div className="relative rounded-lg border border-border bg-bg-card/80 p-8 flex flex-col card-elevated">
+    <div className="relative rounded-lg border border-border bg-bg-card/80 p-5 sm:p-8 flex flex-col card-elevated">
       <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-text-dim text-white text-xs font-bold px-3 py-1 rounded-full">
         COMING SOON
       </div>
@@ -195,8 +195,8 @@ function PricingSection() {
   const [billing, setBilling] = useState<"yearly" | "monthly">("yearly");
 
   return (
-    <section id="pricing" className="px-6 py-36 max-w-5xl mx-auto" aria-label="Pricing">
-      <h2 className="text-3xl md:text-4xl font-serif text-center mb-6">
+    <section id="pricing" className="px-4 sm:px-6 py-20 md:py-36 max-w-5xl mx-auto" aria-label="Pricing">
+      <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif text-center mb-6">
         Simple pricing
       </h2>
       <p className="text-text-muted text-center mb-10 max-w-md mx-auto leading-relaxed">
@@ -204,7 +204,7 @@ function PricingSection() {
       </p>
 
       {/* Billing toggle */}
-      <div className="flex items-center justify-center gap-4 mb-20">
+      <div className="flex items-center justify-center gap-3 sm:gap-4 mb-12 sm:mb-20">
         <span
           className={`text-sm font-mono cursor-pointer transition-colors ${
             billing === "yearly" ? "text-accent" : "text-text-dim"
@@ -239,7 +239,7 @@ function PricingSection() {
         )}
       </div>
 
-      <div className="grid md:grid-cols-3 gap-10 items-start">
+      <div className="grid md:grid-cols-3 gap-6 sm:gap-10 items-start">
         <PricingCard plan={PLANS.free} type="free" billing={billing} />
         <PricingCard plan={PLANS.cloud} type="cloud" popular billing={billing} />
         <DesktopComingSoonCard billing={billing} />
@@ -252,26 +252,26 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-bg paper-texture">
       {/* Nav */}
-      <nav className="flex items-center justify-between px-6 py-6 max-w-5xl mx-auto" aria-label="Main navigation">
+      <nav className="flex items-center justify-between px-4 sm:px-6 py-5 sm:py-6 max-w-5xl mx-auto" aria-label="Main navigation">
         <Link href="/" className="font-mono text-xl tracking-tight">
           <span className="text-accent">Just</span>Write
         </Link>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-3 sm:gap-6">
           <Link
             href="#pricing"
-            className="text-text-muted hover:text-text text-sm font-mono transition-colors"
+            className="hidden sm:inline text-text-muted hover:text-text text-sm font-mono transition-colors"
           >
             Pricing
           </Link>
           <Link
             href="/auth/signin"
-            className="text-text-muted hover:text-text text-sm font-mono transition-colors"
+            className="hidden sm:inline text-text-muted hover:text-text text-sm font-mono transition-colors"
           >
             Sign In
           </Link>
           <Link
             href="/dashboard"
-            className="bg-accent text-white px-4 py-2 rounded text-sm font-mono hover:bg-accent-hover transition-colors"
+            className="bg-accent text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded text-sm font-mono hover:bg-accent-hover transition-colors"
           >
             Start Writing
           </Link>
@@ -281,8 +281,8 @@ export default function LandingPage() {
 
       <main>
         {/* Hero */}
-        <section className="px-6 py-36 md:py-52 max-w-3xl mx-auto text-center fade-in" aria-label="Hero">
-          <h1 className="text-4xl md:text-6xl font-serif leading-tight mb-10">
+        <section className="px-4 sm:px-6 py-20 sm:py-36 md:py-52 max-w-3xl mx-auto text-center fade-in" aria-label="Hero">
+          <h1 className="text-3xl sm:text-4xl md:text-6xl font-serif leading-tight mb-8 sm:mb-10">
             Take back your{" "}
             <TypingEffect words={["focus", "attention", "flow", "clarity", "time"]} />
             <br />
@@ -292,7 +292,7 @@ export default function LandingPage() {
             Every app fights for your attention. JustWrite protects it.
             Go fullscreen, set a timer, and write without distractions.
           </p>
-          <p className="text-text-dim text-base mx-auto mb-14 leading-relaxed">
+          <p className="text-text-dim text-sm sm:text-base mx-auto mb-10 sm:mb-14 leading-relaxed">
             No AI writing for you. No fancy formatting. No notifications.
             Just a blank page and your uninterrupted thoughts.
           </p>
@@ -316,15 +316,15 @@ export default function LandingPage() {
         <div className="max-w-3xl mx-auto px-6"><div className="border-t border-border/50" /></div>
 
         {/* Use-case showcase */}
-        <section className="px-6 py-36 max-w-3xl mx-auto text-center" aria-label="Use cases">
-          <h2 className="text-3xl md:text-4xl font-serif mb-6">
+        <section className="px-4 sm:px-6 py-20 md:py-36 max-w-3xl mx-auto text-center" aria-label="Use cases">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif mb-6">
             Start{" "}
             <TypingEffect words={["journaling", "your novel", "brainstorming", "your thesis", "morning pages", "your memoir"]} />
           </h2>
-          <p className="text-text-muted text-lg leading-relaxed mb-16">
+          <p className="text-text-muted text-base sm:text-lg leading-relaxed mb-10 sm:mb-16">
             Whatever you need to write, JustWrite gets you in the zone.
           </p>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6">
             {[
               { label: "Daily journal", icon: "01" },
               { label: "Novel / book", icon: "02" },
@@ -333,7 +333,7 @@ export default function LandingPage() {
               { label: "Thesis / essays", icon: "05" },
               { label: "Free writing", icon: "06" },
             ].map((item) => (
-              <div key={item.label} className="border border-border rounded-lg p-6 bg-bg-card card-elevated text-center">
+              <div key={item.label} className="border border-border rounded-lg p-4 sm:p-6 bg-bg-card card-elevated text-center">
                 <div className="font-mono text-accent text-2xl mb-3">{item.icon}</div>
                 <div className="font-mono text-sm text-text">{item.label}</div>
               </div>
@@ -345,11 +345,11 @@ export default function LandingPage() {
         <div className="max-w-3xl mx-auto px-6"><div className="border-t border-border/50" /></div>
 
         {/* How it works */}
-        <section id="how-it-works" className="px-6 py-36 max-w-4xl mx-auto" aria-label="How it works">
-          <h2 className="text-3xl md:text-4xl font-serif text-center mb-24">
+        <section id="how-it-works" className="px-4 sm:px-6 py-20 md:py-36 max-w-4xl mx-auto" aria-label="How it works">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif text-center mb-14 sm:mb-24">
             Three steps. That&apos;s it.
           </h2>
-          <div className="grid md:grid-cols-3 gap-20">
+          <div className="grid md:grid-cols-3 gap-10 md:gap-20">
             {[
               {
                 step: "01",
@@ -380,10 +380,10 @@ export default function LandingPage() {
         <div className="max-w-3xl mx-auto px-6"><div className="border-t border-border/50" /></div>
 
         {/* Attention holder */}
-        <section className="px-6 py-36 max-w-4xl mx-auto" aria-label="Why JustWrite">
-          <div className="grid md:grid-cols-2 gap-20 items-center">
+        <section className="px-4 sm:px-6 py-20 md:py-36 max-w-4xl mx-auto" aria-label="Why JustWrite">
+          <div className="grid md:grid-cols-2 gap-10 md:gap-20 items-center">
             <div>
-              <h2 className="text-2xl md:text-3xl font-serif mb-8 leading-snug">
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-serif mb-6 sm:mb-8 leading-snug">
                 Your attention is under attack.
                 <br />
                 <span className="text-accent">This is your shield.</span>
@@ -398,8 +398,8 @@ export default function LandingPage() {
                 else out, and gives your focus the uninterrupted time it deserves.
               </p>
             </div>
-            <div className="border border-border rounded-lg p-10 bg-bg-card card-elevated">
-              <div className="space-y-8">
+            <div className="border border-border rounded-lg p-6 sm:p-10 bg-bg-card card-elevated">
+              <div className="space-y-6 sm:space-y-8">
                 <div className="flex items-start gap-5">
                   <div className="font-mono text-danger text-xl leading-none mt-1">&times;</div>
                   <div>
@@ -424,8 +424,8 @@ export default function LandingPage() {
         <div className="max-w-3xl mx-auto px-6"><div className="border-t border-border/50" /></div>
 
         {/* Deep focus section */}
-        <section className="px-6 py-36 max-w-2xl mx-auto text-center" aria-label="Deep focus">
-          <h2 className="text-2xl md:text-3xl font-serif mb-10 leading-snug">
+        <section className="px-4 sm:px-6 py-20 md:py-36 max-w-2xl mx-auto text-center" aria-label="Deep focus">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-serif mb-8 sm:mb-10 leading-snug">
             Deep focus is a superpower.
             <br />
             <span className="text-text-muted">Most people have lost it.</span>
@@ -457,8 +457,8 @@ export default function LandingPage() {
         <div className="max-w-3xl mx-auto px-6"><div className="border-t border-border/50" /></div>
 
         {/* Final CTA */}
-        <section className="px-6 py-36 max-w-2xl mx-auto text-center" aria-label="Call to action">
-          <h2 className="text-3xl md:text-4xl font-serif mb-8">
+        <section className="px-4 sm:px-6 py-20 md:py-36 max-w-2xl mx-auto text-center" aria-label="Call to action">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif mb-8">
             Stop scrolling. Start focusing.
           </h2>
           <p className="text-text-muted mb-12 leading-loose">
@@ -475,7 +475,7 @@ export default function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-border px-6 py-12 max-w-5xl mx-auto mt-8" aria-label="Footer">
+      <footer className="border-t border-border px-4 sm:px-6 py-8 sm:py-12 max-w-5xl mx-auto mt-8" aria-label="Footer">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="font-mono text-sm text-text-dim">
             <span className="text-accent">Just</span>Write &copy; {new Date().getFullYear()}

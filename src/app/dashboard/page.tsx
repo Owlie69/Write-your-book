@@ -74,11 +74,11 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-bg paper-texture">
       {/* Nav */}
-      <nav className="flex items-center justify-between px-6 py-6 max-w-3xl mx-auto">
+      <nav className="flex items-center justify-between px-4 sm:px-6 py-5 sm:py-6 max-w-3xl mx-auto">
         <Link href="/" className="font-mono text-xl tracking-tight">
           <span className="text-accent">Just</span>Write
         </Link>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           {user ? (
             <>
               <span className="text-text-muted text-sm font-mono hidden sm:inline">
@@ -113,9 +113,9 @@ export default function DashboardPage() {
       </nav>
 
       {/* Content — centered, narrow, breathable */}
-      <div className="px-6 py-16 max-w-2xl mx-auto">
-        <div className="text-center mb-16">
-          <h1 className="font-mono text-3xl mb-3">Your Writing</h1>
+      <div className="px-4 sm:px-6 py-10 sm:py-16 max-w-2xl mx-auto">
+        <div className="text-center mb-10 sm:mb-16">
+          <h1 className="font-mono text-2xl sm:text-3xl mb-3">Your Writing</h1>
           <p className="text-text-muted text-sm">
             {files.length}
             {plan === "free" ? ` / ${FREE_MAX_FILES}` : ""} file
@@ -124,7 +124,7 @@ export default function DashboardPage() {
         </div>
 
         {/* New file button */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-10 sm:mb-16">
           {canCreate ? (
             <button
               onClick={() => setShowNewFile(true)}
@@ -144,7 +144,7 @@ export default function DashboardPage() {
 
         {/* New file modal */}
         {showNewFile && (
-          <div className="mb-16 border border-border rounded-lg p-8 bg-bg-card card-elevated fade-in text-center">
+          <div className="mb-10 sm:mb-16 border border-border rounded-lg p-5 sm:p-8 bg-bg-card card-elevated fade-in text-center">
             <h2 className="font-mono text-lg mb-6">New Writing File</h2>
             <input
               type="text"
@@ -178,9 +178,9 @@ export default function DashboardPage() {
 
         {/* Files list */}
         {files.length === 0 ? (
-          <div className="text-center py-24">
-            <div className="text-text-dim text-6xl mb-8 font-serif">&ldquo;&rdquo;</div>
-            <h2 className="font-mono text-xl mb-4">No files yet</h2>
+          <div className="text-center py-16 sm:py-24">
+            <div className="text-text-dim text-5xl sm:text-6xl mb-6 sm:mb-8 font-serif">&ldquo;&rdquo;</div>
+            <h2 className="font-mono text-lg sm:text-xl mb-4">No files yet</h2>
             <p className="text-text-muted mb-8 leading-relaxed">
               Create your first writing file and start<br />
               putting words on the page.
@@ -204,10 +204,10 @@ export default function DashboardPage() {
                 <Link
                   key={file.id}
                   href={`/write/${file.id}`}
-                  className="block border border-border rounded-lg p-8 bg-bg-card card-elevated hover:bg-bg-card-hover hover:border-accent/40 transition-colors group text-center cursor-pointer"
+                  className="block border border-border rounded-lg p-5 sm:p-8 bg-bg-card card-elevated hover:bg-bg-card-hover hover:border-accent/40 transition-colors group text-center cursor-pointer"
                 >
-                  <h3 className="font-mono text-xl mb-3">{file.title}</h3>
-                  <div className="flex items-center justify-center gap-4 text-sm text-text-muted mb-4">
+                  <h3 className="font-mono text-lg sm:text-xl mb-2 sm:mb-3">{file.title}</h3>
+                  <div className="flex items-center justify-center gap-2 sm:gap-4 text-xs sm:text-sm text-text-muted mb-3 sm:mb-4 flex-wrap">
                     <span>
                       {pageCount}{plan === "free" ? ` / ${maxPages}` : ""} page{pageCount !== 1 ? "s" : ""}
                     </span>
@@ -222,9 +222,9 @@ export default function DashboardPage() {
                       {file.content.length > 200 ? "..." : ""}
                     </p>
                   )}
-                  <div className="flex items-center justify-center gap-4" onClick={(e) => e.preventDefault()}>
+                  <div className="flex items-center justify-center gap-2 sm:gap-4 flex-wrap" onClick={(e) => e.preventDefault()}>
                     <span
-                      className="bg-accent text-white px-6 py-2.5 rounded font-mono text-sm hover:bg-accent-hover transition-colors"
+                      className="bg-accent text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded font-mono text-xs sm:text-sm hover:bg-accent-hover transition-colors"
                     >
                       Write
                     </span>
@@ -264,7 +264,7 @@ export default function DashboardPage() {
                     ) : (
                       <button
                         onClick={(e) => { e.preventDefault(); setDeleteConfirm(file.id); }}
-                        className="text-text-dim hover:text-danger text-sm font-mono transition-colors opacity-0 group-hover:opacity-100"
+                        className="text-text-dim hover:text-danger text-xs sm:text-sm font-mono transition-colors sm:opacity-0 sm:group-hover:opacity-100"
                       >
                         Delete
                       </button>

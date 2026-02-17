@@ -88,6 +88,105 @@ export function canAddPages(currentPageCount: number, plan: PlanType): boolean {
   return currentPageCount < FREE_MAX_PAGES;
 }
 
+// ---- Writing Habit & Session History ----
+
+export interface WritingHabit {
+  days: boolean[]; // [Mon, Tue, Wed, Thu, Fri, Sat, Sun]
+  time: string;
+  enabled: boolean;
+}
+
+export interface SessionRecord {
+  date: string; // "2026-02-17"
+  fileId: string;
+  fileTitle: string;
+  durationMinutes: number;
+  wordsAdded: number;
+}
+
+const HABIT_KEY = "justwrite_habit";
+const SESSIONS_KEY = "justwrite_sessions";
+
+const DEFAULT_HABIT: WritingHabit = {
+  days: [false, false, false, false, false, false, false],
+  time: "09:00",
+  enabled: false,
+};
+
+export function getWritingHabit(): WritingHabit {
+  if (typeof window === "undefined") return DEFAULT_HABIT;
+  try {
+    const data = localStorage.getItem(HABIT_KEY);
+    return data ? JSON.parse(data) : DEFAULT_HABIT;
+  } catch {
+    return DEFAULT_HABIT;
+  }
+}
+
+export function saveWritingHabit(habit: WritingHabit): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(HABIT_KEY, JSON.stringify(habit));
+}
+
+export function getSessionHistory(): SessionRecord[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const data = localStorage.getItem(SESSIONS_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function addSessionRecord(record: SessionRecord): void {
+  if (typeof window === "undefined") return;
+  const history = getSessionHistory();
+  history.push(record);
+  localStorage.setItem(SESSIONS_KEY, JSON.stringify(history));
+}
+
+export function calculateStreak(sessions: SessionRecord[]): { current: number; longest: number } {
+  if (sessions.length === 0) return { current: 0, longest: 0 };
+
+  const dates = [...new Set(sessions.map((s) => s.date))].sort().reverse();
+
+  const today = new Date().toISOString().split("T")[0];
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+
+  let current = 0;
+  let checkDate = dates[0] === today ? today : dates[0] === yesterday ? yesterday : "";
+
+  if (checkDate) {
+    for (const date of dates) {
+      if (date === checkDate) {
+        current++;
+        const prev = new Date(checkDate);
+        prev.setDate(prev.getDate() - 1);
+        checkDate = prev.toISOString().split("T")[0];
+      } else if (date < checkDate) {
+        break;
+      }
+    }
+  }
+
+  let longest = 0;
+  let streak = 1;
+  for (let i = dates.length - 1; i > 0; i--) {
+    const d1 = new Date(dates[i]);
+    const d2 = new Date(dates[i - 1]);
+    const diff = (d2.getTime() - d1.getTime()) / 86400000;
+    if (diff === 1) {
+      streak++;
+    } else {
+      longest = Math.max(longest, streak);
+      streak = 1;
+    }
+  }
+  longest = Math.max(longest, streak);
+
+  return { current, longest };
+}
+
 // ---- Cloud Storage (Supabase) ----
 
 export async function getCloudFiles(userId: string): Promise<WritingFile[]> {

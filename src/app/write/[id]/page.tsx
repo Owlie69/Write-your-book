@@ -13,8 +13,14 @@ import {
   calculatePageCount,
   canAddPages,
   saveCloudFile,
+  getWritingHabit,
+  saveWritingHabit,
+  getSessionHistory,
+  addSessionRecord,
+  calculateStreak,
   type WritingFile,
   type AppSettings,
+  type WritingHabit,
 } from "@/lib/storage";
 import {
   DEFAULT_SESSION_MINUTES,
@@ -65,6 +71,46 @@ function joinPages(pages: string[]): string {
   return pages.join("\n");
 }
 
+function generateCalendarEvent(days: boolean[], time: string, title: string): string {
+  const dayMap = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"];
+  const selectedDays = days.map((d, i) => (d ? dayMap[i] : null)).filter(Boolean);
+  if (selectedDays.length === 0) return "";
+
+  const [h, m] = time.split(":").map(Number);
+  const now = new Date();
+  now.setHours(h, m, 0, 0);
+  if (now < new Date()) now.setDate(now.getDate() + 1);
+
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  const fmt = (d: Date) =>
+    `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
+
+  const dtStart = fmt(now);
+  const dtEnd = fmt(new Date(now.getTime() + 30 * 60000));
+
+  return [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//JustWrite//Writing Sessions//EN",
+    "BEGIN:VEVENT",
+    `UID:justwrite-${Date.now()}@justwrite.app`,
+    `DTSTART:${dtStart}`,
+    `DTEND:${dtEnd}`,
+    `RRULE:FREQ=WEEKLY;BYDAY=${selectedDays.join(",")}`,
+    `SUMMARY:JustWrite — ${title}`,
+    "DESCRIPTION:Time to lock in and write. Open JustWrite and start your session.",
+    "BEGIN:VALARM",
+    "TRIGGER:-PT10M",
+    "ACTION:DISPLAY",
+    "DESCRIPTION:Writing session starts in 10 minutes",
+    "END:VALARM",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+}
+
+const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
+
 export default function WritePage() {
   const params = useParams();
   const router = useRouter();
@@ -90,9 +136,10 @@ export default function WritePage() {
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [pageFlipAnim, setPageFlipAnim] = useState(false);
 
-  // Next session scheduler
-  const [nextSessionDate, setNextSessionDate] = useState("");
-  const [nextSessionTime, setNextSessionTime] = useState("");
+  // Habit & reminders
+  const [habit, setHabit] = useState<WritingHabit>({ days: [false,false,false,false,false,false,false], time: "09:00", enabled: false });
+  const [streak, setStreak] = useState({ current: 0, longest: 0 });
+  const [habitSaved, setHabitSaved] = useState(false);
   const [reminderSent, setReminderSent] = useState(false);
   const [reminderSending, setReminderSending] = useState(false);
   const [reminderError, setReminderError] = useState<string | null>(null);
@@ -128,6 +175,8 @@ export default function WritePage() {
       setPages(initialPages);
       setCurrentPageIndex(initialPages.length - 1);
     }
+    setHabit(getWritingHabit());
+    setStreak(calculateStreak(getSessionHistory()));
   }, [fileId]);
 
   const saveFile = useCallback(
@@ -186,10 +235,14 @@ export default function WritePage() {
       wordsPerMinute: wpm,
     });
 
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    setNextSessionDate(tomorrow.toISOString().split("T")[0]);
-    setNextSessionTime("09:00");
+    addSessionRecord({
+      date: new Date().toISOString().split("T")[0],
+      fileId: fileId,
+      fileTitle: file?.title || "",
+      durationMinutes: Math.max(1, actualMinutes),
+      wordsAdded: totalWordsAddedRef.current,
+    });
+    setStreak(calculateStreak(getSessionHistory()));
 
     setEditorState("done");
     exitFullscreen();
@@ -397,12 +450,26 @@ export default function WritePage() {
     saveLocalSettings(newSettings);
   }
 
-  async function scheduleReminder() {
-    if (!nextSessionDate || !nextSessionTime) return;
+  function downloadCalendarEvent() {
+    const ics = generateCalendarEvent(habit.days, habit.time, file?.title || "Writing");
+    if (!ics) return;
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "justwrite-sessions.ics";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  async function sendHabitReminders() {
     if (!user?.email) {
       setReminderError("Sign in to receive email reminders");
       return;
     }
+    if (!habit.days.some((d) => d)) return;
     setReminderSending(true);
     setReminderError(null);
     try {
@@ -414,18 +481,19 @@ export default function WritePage() {
           userId: user.id,
           fileId: file?.id,
           fileTitle: file?.title,
-          sessionDate: nextSessionDate,
-          sessionTime: nextSessionTime,
+          habitDays: habit.days,
+          habitTime: habit.time,
+          type: "recurring",
         }),
       });
       if (res.ok) {
         setReminderSent(true);
       } else {
         const data = await res.json();
-        setReminderError(data.error || "Failed to schedule reminder");
+        setReminderError(data.error || "Failed to set reminders");
       }
     } catch {
-      setReminderError("Failed to schedule reminder");
+      setReminderError("Failed to set reminders");
     } finally {
       setReminderSending(false);
     }
@@ -568,16 +636,16 @@ export default function WritePage() {
         )}
 
         {/* Top bar */}
-        <div className="flex items-center justify-between px-8 py-3 border-b border-border/50">
-          <span className="font-mono text-sm text-text-dim">{file.title}</span>
-          <div className={`font-mono text-lg ${isLowTime ? "text-danger" : "text-accent"}`}>
+        <div className="flex items-center justify-between px-3 sm:px-8 py-3 border-b border-border/50">
+          <span className="font-mono text-xs sm:text-sm text-text-dim truncate max-w-[100px] sm:max-w-none">{file.title}</span>
+          <div className={`font-mono text-base sm:text-lg ${isLowTime ? "text-danger" : "text-accent"}`}>
             {formatTime(timeLeft)}
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-xs font-mono text-text-dim">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <span className="text-xs font-mono text-text-dim hidden sm:inline">
               {isSaving ? "Saving..." : lastSaved ? `Saved ${lastSaved.toLocaleTimeString()}` : ""}
             </span>
-            <div className="flex items-center gap-1">
+            <div className="hidden sm:flex items-center gap-1">
               {(Object.entries(TEXT_SIZES) as [TextSize, { label: string; class: string }][]).map(
                 ([key, value]) => (
                   <button
@@ -641,7 +709,7 @@ export default function WritePage() {
         </div>
 
         {/* Page area — scrollable, current page always centered */}
-        <div className="flex-1 overflow-auto flex items-start justify-center py-12 px-4">
+        <div className="flex-1 overflow-auto flex items-start justify-center py-4 sm:py-12 px-2 sm:px-4">
           <div className="relative flex items-start justify-center">
 
             {/* Ghost of previous page — positioned to the left, doesn't affect centering */}
@@ -676,8 +744,8 @@ export default function WritePage() {
         </div>
 
         {/* Bottom bar */}
-        <div className="flex items-center justify-between px-8 py-3 border-t border-border/50 text-xs font-mono text-text-dim">
-          <span>{wordCount} words</span>
+        <div className="flex items-center justify-between px-3 sm:px-8 py-3 border-t border-border/50 text-xs font-mono text-text-dim">
+          <span className="hidden sm:inline">{wordCount} words</span>
           <div className="flex items-center gap-4">
             <button
               onClick={() => goToPage(currentPageIndex - 1)}
@@ -706,35 +774,35 @@ export default function WritePage() {
 
   return (
     <div className="min-h-screen bg-bg paper-texture">
-      <div className="max-w-lg mx-auto px-6 py-20 text-center fade-in">
-        <div className="text-accent text-6xl mb-6">&#10003;</div>
-        <h1 className="font-mono text-2xl mb-3">Session Complete</h1>
+      <div className="max-w-lg mx-auto px-4 sm:px-6 py-12 sm:py-20 text-center fade-in">
+        <div className="text-accent text-5xl sm:text-6xl mb-6">&#10003;</div>
+        <h1 className="font-mono text-xl sm:text-2xl mb-3">Session Complete</h1>
         <p className="text-text-muted mb-12 leading-relaxed">
           You stayed locked in and wrote. That&apos;s what matters.
         </p>
 
         {/* Stats card */}
         {stats && (
-          <div className="border border-border rounded-lg p-8 bg-bg-card card-elevated mb-8">
+          <div className="border border-border rounded-lg p-5 sm:p-8 bg-bg-card card-elevated mb-8">
             <h2 className="font-mono text-sm text-text-muted mb-6 uppercase tracking-wider">
               Your Session
             </h2>
-            <div className="grid grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-3 gap-3 sm:gap-6 mb-8">
               <div>
-                <div className="font-mono text-3xl text-accent">{stats.durationMinutes}</div>
+                <div className="font-mono text-2xl sm:text-3xl text-accent">{stats.durationMinutes}</div>
                 <div className="text-text-dim text-xs mt-1">minutes</div>
               </div>
               <div>
-                <div className="font-mono text-3xl text-accent">+{Math.max(0, stats.netWords)}</div>
+                <div className="font-mono text-2xl sm:text-3xl text-accent">+{Math.max(0, stats.netWords)}</div>
                 <div className="text-text-dim text-xs mt-1">net words</div>
               </div>
               <div>
-                <div className="font-mono text-3xl text-accent">{stats.totalPages}</div>
+                <div className="font-mono text-2xl sm:text-3xl text-accent">{stats.totalPages}</div>
                 <div className="text-text-dim text-xs mt-1">total pages</div>
               </div>
             </div>
 
-            <div className="border-t border-border pt-6 grid grid-cols-2 gap-4 text-left">
+            <div className="border-t border-border pt-6 grid grid-cols-2 gap-2 sm:gap-4 text-left">
               <div className="flex justify-between">
                 <span className="text-text-dim text-xs">Words added</span>
                 <span className="font-mono text-xs text-success">+{stats.wordsAdded}</span>
@@ -763,78 +831,124 @@ export default function WritePage() {
           </div>
         )}
 
-        {/* Next session scheduler */}
-        <div className="border border-border rounded-lg p-8 bg-bg-card card-elevated mb-8">
-          <h2 className="font-mono text-sm text-text-muted mb-2 uppercase tracking-wider">
-            Next Session
-          </h2>
-          <p className="text-text-dim text-xs mb-6">
-            Consistency is how books get finished.
-          </p>
-
-          {reminderSent ? (
-            <div className="py-6">
-              <div className="text-success text-2xl mb-3">&#10003;</div>
-              <p className="text-text-muted text-sm leading-relaxed">
-                Reminder set for{" "}
-                <span className="text-accent font-mono">
-                  {new Date(nextSessionDate + "T" + nextSessionTime).toLocaleDateString(undefined, {
-                    weekday: "long",
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </span>{" "}
-                at <span className="text-accent font-mono">{nextSessionTime}</span>.
-              </p>
+        {/* Streak & Habit */}
+        <div className="border border-border rounded-lg p-5 sm:p-8 bg-bg-card card-elevated mb-8">
+          {/* Streak display */}
+          <div className="flex items-center justify-center gap-6 sm:gap-8 mb-6">
+            <div className="text-center">
+              <div className="font-mono text-2xl sm:text-3xl text-accent">{streak.current}</div>
+              <div className="text-text-dim text-xs mt-1">day streak</div>
             </div>
-          ) : (
-            <>
-              <div className="flex gap-4 mb-4">
-                <div className="flex-1">
-                  <label className="block text-xs text-text-dim mb-2 text-left font-mono">Date</label>
-                  <input
-                    type="date"
-                    value={nextSessionDate}
-                    onChange={(e) => setNextSessionDate(e.target.value)}
-                    min={new Date().toISOString().split("T")[0]}
-                    className="w-full bg-bg-input border border-border rounded px-3 py-2.5 text-text font-mono text-sm focus:border-accent focus:outline-none transition-colors"
-                  />
+            <div className="text-border text-xl">|</div>
+            <div className="text-center">
+              <div className="font-mono text-2xl sm:text-3xl text-text-muted">{streak.longest}</div>
+              <div className="text-text-dim text-xs mt-1">best streak</div>
+            </div>
+          </div>
+
+          <div className="border-t border-border pt-6">
+            <h2 className="font-mono text-sm text-text-muted mb-2 uppercase tracking-wider">
+              Build Your Writing Habit
+            </h2>
+
+            {plan !== "free" ? (
+              <>
+                <p className="text-text-dim text-xs mb-6">
+                  Pick your writing days, get reminded, or block your calendar.
+                </p>
+
+                {/* Day of week toggles */}
+                <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-6">
+                  {DAY_LABELS.map((day, i) => (
+                    <button
+                      key={i}
+                      onClick={() => {
+                        const newDays = [...habit.days];
+                        newDays[i] = !newDays[i];
+                        setHabit({ ...habit, days: newDays });
+                        setHabitSaved(false);
+                      }}
+                      className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full font-mono text-xs sm:text-sm transition-colors ${
+                        habit.days[i]
+                          ? "bg-accent text-white"
+                          : "border border-border text-text-dim hover:border-accent hover:text-accent"
+                      }`}
+                    >
+                      {day}
+                    </button>
+                  ))}
                 </div>
-                <div className="flex-1">
-                  <label className="block text-xs text-text-dim mb-2 text-left font-mono">Time</label>
+
+                {/* Time picker */}
+                <div className="flex items-center justify-center gap-3 mb-6">
+                  <label className="text-xs text-text-dim font-mono">At</label>
                   <input
                     type="time"
-                    value={nextSessionTime}
-                    onChange={(e) => setNextSessionTime(e.target.value)}
-                    className="w-full bg-bg-input border border-border rounded px-3 py-2.5 text-text font-mono text-sm focus:border-accent focus:outline-none transition-colors"
+                    value={habit.time}
+                    onChange={(e) => {
+                      setHabit({ ...habit, time: e.target.value });
+                      setHabitSaved(false);
+                    }}
+                    className="bg-bg-input border border-border rounded px-3 py-2 text-text font-mono text-sm focus:border-accent focus:outline-none transition-colors"
                   />
                 </div>
-              </div>
 
-              {reminderError && (
-                <p className="text-danger text-xs font-mono mb-3">{reminderError}</p>
-              )}
+                {/* Actions */}
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={() => {
+                      saveWritingHabit({ ...habit, enabled: true });
+                      setHabitSaved(true);
+                    }}
+                    disabled={!habit.days.some((d) => d)}
+                    className="w-full bg-accent text-white py-3 rounded font-mono text-sm hover:bg-accent-hover transition-colors disabled:opacity-40"
+                  >
+                    {habitSaved ? "Schedule Saved!" : "Save Writing Schedule"}
+                  </button>
 
-              <button
-                onClick={scheduleReminder}
-                disabled={!nextSessionDate || !nextSessionTime || reminderSending}
-                className="w-full border border-accent text-accent py-3 rounded font-mono text-sm hover:bg-accent hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {reminderSending
-                  ? "Scheduling..."
-                  : user?.email
-                  ? "Remind Me by Email"
-                  : "Sign In to Set Reminders"}
-              </button>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={downloadCalendarEvent}
+                      disabled={!habit.days.some((d) => d)}
+                      className="flex-1 border border-border py-2.5 rounded font-mono text-xs text-text-muted hover:border-accent hover:text-accent transition-colors disabled:opacity-40"
+                    >
+                      Add to Calendar
+                    </button>
+                    <button
+                      onClick={sendHabitReminders}
+                      disabled={!habit.days.some((d) => d) || !user?.email || reminderSending}
+                      className="flex-1 border border-border py-2.5 rounded font-mono text-xs text-text-muted hover:border-accent hover:text-accent transition-colors disabled:opacity-40"
+                    >
+                      {reminderSending ? "Sending..." : reminderSent ? "Reminders Set!" : "Email Reminders"}
+                    </button>
+                  </div>
 
-              {!user && (
-                <p className="text-text-dim text-xs mt-3">
-                  <Link href="/auth/signin" className="text-accent hover:underline">Sign in</Link>{" "}
-                  to get email reminders.
+                  {reminderError && (
+                    <p className="text-danger text-xs font-mono">{reminderError}</p>
+                  )}
+
+                  {!user && (
+                    <p className="text-text-dim text-xs">
+                      <Link href="/auth/signin" className="text-accent hover:underline">Sign in</Link>{" "}
+                      for email reminders.
+                    </p>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="py-4 text-center">
+                <p className="text-text-dim text-sm mb-4 leading-relaxed">
+                  Set recurring writing days, get email reminders, and block your calendar.
                 </p>
-              )}
-            </>
-          )}
+                <Link
+                  href="/#pricing"
+                  className="inline-block border border-accent text-accent px-6 py-2.5 rounded font-mono text-sm hover:bg-accent hover:text-white transition-colors"
+                >
+                  Upgrade for Habit Tools
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Action buttons */}
