@@ -223,11 +223,13 @@ export default function DashboardPage() {
                     </p>
                   )}
                   <div className="flex items-center justify-center gap-2 sm:gap-4 flex-wrap" onClick={(e) => e.preventDefault()}>
-                    <span
+                    <Link
+                      href={`/write/${file.id}`}
+                      onClick={(e) => e.stopPropagation()}
                       className="bg-accent text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded font-mono text-xs sm:text-sm hover:bg-accent-hover transition-colors"
                     >
-                      Write
-                    </span>
+                      Open
+                    </Link>
                     {plan !== "free" ? (
                       <button
                         onClick={(e) => { e.preventDefault(); downloadFile(file); }}

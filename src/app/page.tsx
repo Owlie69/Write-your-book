@@ -524,8 +524,7 @@ export default function LandingPage() {
                 <div className="flex items-start gap-5">
                   <div className="font-mono text-danger text-xl leading-none mt-1">&times;</div>
                   <div>
-                    <div className="font-mono text-sm mb-2 text-text-muted">Attention drainers</div>
-                    <p className="text-text-dim text-sm leading-relaxed">Social media, notifications, infinite scroll, clickbait, autoplay videos</p>
+                    <div className="font-mono text-sm text-text-muted">Attention drainers</div>
                   </div>
                 </div>
                 <div className="border-t border-border" />

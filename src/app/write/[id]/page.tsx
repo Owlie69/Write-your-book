@@ -651,9 +651,9 @@ export default function WritePage() {
         )}
 
         {/* Top bar */}
-        <div className="flex items-center justify-between px-3 sm:px-8 py-3 border-b border-border/50">
+        <div className="relative flex items-center justify-between px-3 sm:px-8 py-3 border-b border-border/50">
           <span className="font-mono text-xs sm:text-sm text-text-dim truncate max-w-[100px] sm:max-w-none">{file.title}</span>
-          <div className={`font-mono text-base sm:text-lg ${isLowTime ? "text-danger" : "text-accent"}`}>
+          <div className={`absolute left-1/2 -translate-x-1/2 font-mono text-base sm:text-lg ${isLowTime ? "text-danger" : "text-accent"}`}>
             {formatTime(timeLeft)}
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
@@ -759,7 +759,7 @@ export default function WritePage() {
         </div>
 
         {/* Bottom bar */}
-        <div className="flex items-center justify-between px-3 sm:px-8 py-3 border-t border-border/50 text-xs font-mono text-text-dim">
+        <div className="flex items-center justify-between px-3 sm:px-8 py-3 border-t border-border/50 text-xs font-mono text-text-dim-extra">
           <span className="hidden sm:inline">+{sessionWordCount} this session</span>
           <div className="flex items-center gap-4">
             <button
@@ -778,7 +778,7 @@ export default function WritePage() {
               &#8594;
             </button>
           </div>
-          <span>{wordCount} words &middot; {charCount.toLocaleString()} chars</span>
+          <span>{wordCount} words &middot; {charCount.toLocaleString()} characters</span>
         </div>
       </div>
     );

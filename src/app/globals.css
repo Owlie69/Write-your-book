@@ -10,6 +10,7 @@
   --color-text: #1a1a1a;
   --color-text-muted: #6b6b6b;
   --color-text-dim: #9a9a9a;
+  --color-text-dim-extra: #bfbfbf;
   --color-accent: #b8860b;
   --color-accent-hover: #cc9b1a;
   --color-accent-dim: #8a7350;
@@ -55,6 +56,7 @@
     --color-text: #e8e0d6;
     --color-text-muted: #9a918a;
     --color-text-dim: #6b6460;
+    --color-text-dim-extra: #504a46;
     --color-accent: #c8a87c;
     --color-accent-hover: #d4b88e;
     --color-accent-dim: #8a7350;
