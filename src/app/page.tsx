@@ -191,6 +191,121 @@ function DesktopComingSoonCard({ billing }: { billing: "yearly" | "monthly" }) {
   );
 }
 
+function SupportSection() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim() || !email.trim() || !message.trim()) return;
+
+    setSending(true);
+    setError("");
+    try {
+      const res = await fetch("/api/support", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim(), email: email.trim(), message: message.trim() }),
+      });
+      if (res.ok) {
+        setSent(true);
+        setName("");
+        setEmail("");
+        setMessage("");
+      } else {
+        const data = await res.json();
+        setError(data.error || "Failed to send. Please try again.");
+      }
+    } catch {
+      setError("Failed to send. Please try again.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <section id="support" className="px-4 sm:px-6 py-20 md:py-36 max-w-xl mx-auto" aria-label="Support">
+      <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif text-center mb-6">
+        Need help?
+      </h2>
+      <p className="text-text-muted text-center mb-10 max-w-md mx-auto leading-relaxed">
+        Have a question, found a bug, or just want to say hi? Send us a message and we&apos;ll get back to you.
+      </p>
+
+      {sent ? (
+        <div className="border border-border rounded-lg p-8 bg-bg-card card-elevated text-center fade-in">
+          <div className="text-accent text-4xl mb-4">&#10003;</div>
+          <h3 className="font-mono text-lg mb-2">Message Sent!</h3>
+          <p className="text-text-muted text-sm mb-6">We&apos;ll get back to you as soon as possible.</p>
+          <button
+            onClick={() => setSent(false)}
+            className="text-accent hover:underline font-mono text-sm"
+          >
+            Send another message
+          </button>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="border border-border rounded-lg p-6 sm:p-8 bg-bg-card card-elevated space-y-5">
+          <div>
+            <label htmlFor="support-name" className="block text-sm font-mono text-text-muted mb-2">
+              Name
+            </label>
+            <input
+              id="support-name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              placeholder="Your name"
+              className="w-full bg-bg-input border border-border rounded px-4 py-3 text-text font-mono text-sm focus:border-accent focus:outline-none transition-colors"
+            />
+          </div>
+          <div>
+            <label htmlFor="support-email" className="block text-sm font-mono text-text-muted mb-2">
+              Email
+            </label>
+            <input
+              id="support-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              placeholder="you@example.com"
+              className="w-full bg-bg-input border border-border rounded px-4 py-3 text-text font-mono text-sm focus:border-accent focus:outline-none transition-colors"
+            />
+          </div>
+          <div>
+            <label htmlFor="support-message" className="block text-sm font-mono text-text-muted mb-2">
+              Message
+            </label>
+            <textarea
+              id="support-message"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              required
+              rows={5}
+              placeholder="How can we help?"
+              className="w-full bg-bg-input border border-border rounded px-4 py-3 text-text font-mono text-sm focus:border-accent focus:outline-none transition-colors resize-none"
+            />
+          </div>
+          {error && <p className="text-danger text-xs font-mono">{error}</p>}
+          <button
+            type="submit"
+            disabled={sending || !name.trim() || !email.trim() || !message.trim()}
+            className="w-full bg-accent text-white py-3.5 rounded font-mono text-sm hover:bg-accent-hover transition-colors disabled:opacity-50"
+          >
+            {sending ? "Sending..." : "Send Message"}
+          </button>
+        </form>
+      )}
+    </section>
+  );
+}
+
 function PricingSection() {
   const [billing, setBilling] = useState<"yearly" | "monthly">("yearly");
 
@@ -262,6 +377,12 @@ export default function LandingPage() {
             className="hidden sm:inline text-text-muted hover:text-text text-sm font-mono transition-colors"
           >
             Pricing
+          </Link>
+          <Link
+            href="#support"
+            className="hidden sm:inline text-text-muted hover:text-text text-sm font-mono transition-colors"
+          >
+            Support
           </Link>
           <Link
             href="/auth/signin"
@@ -456,6 +577,12 @@ export default function LandingPage() {
         {/* Divider */}
         <div className="max-w-3xl mx-auto px-6"><div className="border-t border-border/50" /></div>
 
+        {/* Support */}
+        <SupportSection />
+
+        {/* Divider */}
+        <div className="max-w-3xl mx-auto px-6"><div className="border-t border-border/50" /></div>
+
         {/* Final CTA */}
         <section className="px-4 sm:px-6 py-20 md:py-36 max-w-2xl mx-auto text-center" aria-label="Call to action">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif mb-8">
@@ -483,6 +610,9 @@ export default function LandingPage() {
           <div className="flex gap-8 text-sm text-text-dim font-mono">
             <Link href="#pricing" className="hover:text-text transition-colors">
               Pricing
+            </Link>
+            <Link href="#support" className="hover:text-text transition-colors">
+              Support
             </Link>
             <Link href="/auth/signin" className="hover:text-text transition-colors">
               Sign In

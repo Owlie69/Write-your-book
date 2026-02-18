@@ -232,9 +232,9 @@ export default function DashboardPage() {
                       <button
                         onClick={(e) => { e.preventDefault(); downloadFile(file); }}
                         className="border border-border px-4 py-2.5 rounded font-mono text-xs text-text-muted hover:border-accent hover:text-accent transition-colors"
-                        title="Download as .txt"
+                        title="Download file"
                       >
-                        .txt
+                        Download
                       </button>
                     ) : (
                       <button
@@ -243,7 +243,7 @@ export default function DashboardPage() {
                         disabled
                         onClick={(e) => e.preventDefault()}
                       >
-                        .txt
+                        Download
                       </button>
                     )}
                     {deleteConfirm === file.id ? (

@@ -124,6 +124,7 @@ export default function WritePage() {
   const [timeLeft, setTimeLeft] = useState(settings.sessionMinutes * 60);
   const [sessionMinutes, setSessionMinutes] = useState(settings.sessionMinutes);
   const [wordCount, setWordCount] = useState(0);
+  const [charCount, setCharCount] = useState(0);
   const [sessionWordCount, setSessionWordCount] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -168,6 +169,7 @@ export default function WritePage() {
       prevContentLenRef.current = found.content.length;
       const wc = found.content.split(/\s+/).filter(Boolean).length;
       setWordCount(wc);
+      setCharCount(found.content.length);
       startWordCountRef.current = wc;
       prevWordCountRef.current = wc;
       peakWordCountRef.current = wc;
@@ -435,6 +437,7 @@ export default function WritePage() {
     if (wc > peakWordCountRef.current) peakWordCountRef.current = wc;
 
     setWordCount(wc);
+    setCharCount(fullContent.length);
     setSessionWordCount(wc - startWordCountRef.current);
   }
 
@@ -548,16 +551,28 @@ export default function WritePage() {
             {canCustomize ? (
               <div className="flex items-center justify-center gap-6">
                 <button
-                  onClick={() => setSessionMinutes((m) => Math.max(MIN_SESSION_MINUTES, m - 5))}
+                  onClick={() => setSessionMinutes((m) => Math.max(MIN_SESSION_MINUTES, m - 1))}
                   className="w-12 h-12 rounded border border-border hover:border-accent text-text-muted hover:text-accent transition-colors font-mono text-lg"
                 >
                   -
                 </button>
-                <span className="font-mono text-5xl text-accent w-28">
-                  {sessionMinutes}
-                </span>
+                <div className="relative w-28">
+                  <input
+                    type="number"
+                    min={MIN_SESSION_MINUTES}
+                    max={MAX_SESSION_MINUTES}
+                    value={sessionMinutes}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      if (!isNaN(val)) {
+                        setSessionMinutes(Math.min(MAX_SESSION_MINUTES, Math.max(MIN_SESSION_MINUTES, val)));
+                      }
+                    }}
+                    className="font-mono text-5xl text-accent w-28 text-center bg-transparent border-none outline-none focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                </div>
                 <button
-                  onClick={() => setSessionMinutes((m) => Math.min(MAX_SESSION_MINUTES, m + 5))}
+                  onClick={() => setSessionMinutes((m) => Math.min(MAX_SESSION_MINUTES, m + 1))}
                   className="w-12 h-12 rounded border border-border hover:border-accent text-text-muted hover:text-accent transition-colors font-mono text-lg"
                 >
                   +
@@ -674,7 +689,7 @@ export default function WritePage() {
                   URL.revokeObjectURL(url);
                 }}
                 className="w-7 h-7 rounded text-xs font-mono text-text-dim hover:text-accent transition-colors flex items-center justify-center"
-                title="Download as .txt"
+                title="Download file"
                 aria-label="Download file"
               >
                 &#8615;
@@ -745,7 +760,7 @@ export default function WritePage() {
 
         {/* Bottom bar */}
         <div className="flex items-center justify-between px-3 sm:px-8 py-3 border-t border-border/50 text-xs font-mono text-text-dim">
-          <span className="hidden sm:inline">{wordCount} words</span>
+          <span className="hidden sm:inline">+{sessionWordCount} this session</span>
           <div className="flex items-center gap-4">
             <button
               onClick={() => goToPage(currentPageIndex - 1)}
@@ -763,7 +778,7 @@ export default function WritePage() {
               &#8594;
             </button>
           </div>
-          <span>+{sessionWordCount} this session</span>
+          <span>{wordCount} words &middot; {charCount.toLocaleString()} chars</span>
         </div>
       </div>
     );
@@ -974,7 +989,7 @@ export default function WritePage() {
               }}
               className="w-full border border-accent text-accent py-3.5 rounded font-mono text-sm hover:bg-accent hover:text-white transition-colors"
             >
-              Download as .txt
+              Download
             </button>
           ) : (
             <Link
