@@ -11,7 +11,9 @@ import {
   canCreateFile,
   calculatePageCount,
   syncFiles,
+  getSessionHistory,
   type WritingFile,
+  type SessionRecord,
 } from "@/lib/storage";
 import { FREE_MAX_FILES, FREE_MAX_PAGES } from "@/lib/constants";
 
@@ -37,13 +39,13 @@ export default function DashboardPage() {
 
   const loadFiles = useCallback(async () => {
     const local = getLocalFiles();
-    if (user && (plan === "cloud" || plan === "desktop")) {
+    if (user) {
       const synced = await syncFiles(user.id, local);
       setFiles(synced);
     } else {
       setFiles(local);
     }
-  }, [user, plan]);
+  }, [user]);
 
   useEffect(() => {
     loadFiles();
@@ -99,7 +101,7 @@ export default function DashboardPage() {
               href="/auth/signin"
               className="text-text-muted hover:text-text text-sm font-mono transition-colors"
             >
-              Sign In for Cloud Sync
+              Sign In to Save to Cloud
             </Link>
           )}
           <button
@@ -278,9 +280,16 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* Monthly Progress */}
+        {files.length > 0 && (
+          <div className="mt-10 sm:mt-16">
+            <MonthlyProgressSection isPaid={plan !== "free"} />
+          </div>
+        )}
+
         {/* Plan info */}
         {plan === "free" && files.length > 0 && (
-          <div className="mt-20 text-center">
+          <div className="mt-10 text-center">
             <div className="border-t border-border/50 mb-10" />
             <p className="text-text-muted text-sm mb-4">
               Free plan: {FREE_MAX_FILES} files, {FREE_MAX_PAGES} pages each.
@@ -289,10 +298,174 @@ export default function DashboardPage() {
               href="/#pricing"
               className="text-accent hover:underline text-sm font-mono"
             >
-              Upgrade for unlimited files &amp; cloud sync &rarr;
+              Upgrade for unlimited files &amp; pages &rarr;
             </Link>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function getMonthlyStats(sessions: SessionRecord[]) {
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+
+  // Get previous month
+  const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+  const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+
+  const thisMonthSessions = sessions.filter((s) => {
+    const d = new Date(s.date);
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  });
+
+  const lastMonthSessions = sessions.filter((s) => {
+    const d = new Date(s.date);
+    return d.getMonth() === prevMonth && d.getFullYear() === prevYear;
+  });
+
+  const thisMonthWords = thisMonthSessions.reduce((sum, s) => sum + s.wordsAdded, 0);
+  const lastMonthWords = lastMonthSessions.reduce((sum, s) => sum + s.wordsAdded, 0);
+
+  const thisMonthMinutes = thisMonthSessions.reduce((sum, s) => sum + s.durationMinutes, 0);
+  const lastMonthMinutes = lastMonthSessions.reduce((sum, s) => sum + s.durationMinutes, 0);
+
+  const thisMonthWPM = thisMonthMinutes > 0 ? Math.round(thisMonthWords / thisMonthMinutes) : 0;
+  const lastMonthWPM = lastMonthMinutes > 0 ? Math.round(lastMonthWords / lastMonthMinutes) : 0;
+
+  const wordChange = lastMonthWords > 0
+    ? Math.round(((thisMonthWords - lastMonthWords) / lastMonthWords) * 100)
+    : thisMonthWords > 0 ? 100 : 0;
+
+  const wpmChange = lastMonthWPM > 0
+    ? Math.round(((thisMonthWPM - lastMonthWPM) / lastMonthWPM) * 100)
+    : thisMonthWPM > 0 ? 100 : 0;
+
+  return {
+    thisMonthWords,
+    lastMonthWords,
+    thisMonthWPM,
+    lastMonthWPM,
+    thisMonthSessions: thisMonthSessions.length,
+    lastMonthSessions: lastMonthSessions.length,
+    wordChange,
+    wpmChange,
+  };
+}
+
+function MonthlyProgressSection({ isPaid }: { isPaid: boolean }) {
+  const sessions = getSessionHistory();
+  const stats = getMonthlyStats(sessions);
+  const monthName = new Date().toLocaleString("default", { month: "long" });
+
+  const content = (
+    <div className="border border-border rounded-lg p-5 sm:p-8 bg-bg-card card-elevated">
+      <h2 className="font-mono text-sm text-text-muted mb-6 uppercase tracking-wider text-center">
+        Your Progress This Month
+      </h2>
+
+      <div className="grid grid-cols-3 gap-3 sm:gap-6 mb-6">
+        <div className="text-center">
+          <div className="font-mono text-2xl sm:text-3xl text-accent">
+            {stats.thisMonthWords.toLocaleString()}
+          </div>
+          <div className="text-text-dim text-xs mt-1">words written</div>
+          {stats.wordChange !== 0 && (
+            <div className={`text-xs font-mono mt-1 ${stats.wordChange > 0 ? "text-success" : "text-danger"}`}>
+              {stats.wordChange > 0 ? "+" : ""}{stats.wordChange}% vs last month
+            </div>
+          )}
+        </div>
+        <div className="text-center">
+          <div className="font-mono text-2xl sm:text-3xl text-accent">
+            {stats.thisMonthWPM}
+          </div>
+          <div className="text-text-dim text-xs mt-1">avg words/min</div>
+          {stats.wpmChange !== 0 && (
+            <div className={`text-xs font-mono mt-1 ${stats.wpmChange > 0 ? "text-success" : "text-danger"}`}>
+              {stats.wpmChange > 0 ? "+" : ""}{stats.wpmChange}% vs last month
+            </div>
+          )}
+        </div>
+        <div className="text-center">
+          <div className="font-mono text-2xl sm:text-3xl text-accent">
+            {stats.thisMonthSessions}
+          </div>
+          <div className="text-text-dim text-xs mt-1">sessions in {monthName}</div>
+        </div>
+      </div>
+
+      {/* Mini bar chart showing this month vs last month */}
+      <div className="border-t border-border pt-5">
+        <div className="grid grid-cols-2 gap-4 sm:gap-8">
+          <div>
+            <div className="text-text-dim text-xs font-mono mb-2">Word output</div>
+            <div className="flex items-end gap-2 h-12">
+              <div className="flex-1 flex flex-col justify-end">
+                <div
+                  className="bg-border rounded-t"
+                  style={{ height: `${stats.lastMonthWords > 0 ? Math.max(8, (stats.lastMonthWords / Math.max(stats.thisMonthWords, stats.lastMonthWords, 1)) * 48) : 8}px` }}
+                />
+                <div className="text-text-dim-extra text-[10px] font-mono mt-1 text-center">Last</div>
+              </div>
+              <div className="flex-1 flex flex-col justify-end">
+                <div
+                  className="bg-accent rounded-t"
+                  style={{ height: `${stats.thisMonthWords > 0 ? Math.max(8, (stats.thisMonthWords / Math.max(stats.thisMonthWords, stats.lastMonthWords, 1)) * 48) : 8}px` }}
+                />
+                <div className="text-text-dim-extra text-[10px] font-mono mt-1 text-center">Now</div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div className="text-text-dim text-xs font-mono mb-2">Typing speed</div>
+            <div className="flex items-end gap-2 h-12">
+              <div className="flex-1 flex flex-col justify-end">
+                <div
+                  className="bg-border rounded-t"
+                  style={{ height: `${stats.lastMonthWPM > 0 ? Math.max(8, (stats.lastMonthWPM / Math.max(stats.thisMonthWPM, stats.lastMonthWPM, 1)) * 48) : 8}px` }}
+                />
+                <div className="text-text-dim-extra text-[10px] font-mono mt-1 text-center">Last</div>
+              </div>
+              <div className="flex-1 flex flex-col justify-end">
+                <div
+                  className="bg-accent rounded-t"
+                  style={{ height: `${stats.thisMonthWPM > 0 ? Math.max(8, (stats.thisMonthWPM / Math.max(stats.thisMonthWPM, stats.lastMonthWPM, 1)) * 48) : 8}px` }}
+                />
+                <div className="text-text-dim-extra text-[10px] font-mono mt-1 text-center">Now</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (isPaid) {
+    return content;
+  }
+
+  // Free users: greyed out with upgrade overlay
+  return (
+    <div className="relative">
+      <div className="opacity-30 blur-[2px] pointer-events-none select-none">
+        {content}
+      </div>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <div className="text-center px-6">
+          <p className="font-mono text-sm mb-2">Track your writing evolution</p>
+          <p className="text-text-muted text-xs mb-5 max-w-xs leading-relaxed">
+            See how your word count and typing speed improve month over month.
+          </p>
+          <Link
+            href="/#pricing"
+            className="inline-block bg-accent text-white px-6 py-2.5 rounded font-mono text-sm hover:bg-accent-hover transition-colors"
+          >
+            Unlock Progress Insights
+          </Link>
+        </div>
       </div>
     </div>
   );

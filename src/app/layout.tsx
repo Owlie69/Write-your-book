@@ -4,7 +4,7 @@ import { ThemeProvider } from "@/lib/theme-context";
 
 export const metadata: Metadata = {
   title: {
-    default: "JustWrite — Distraction-free writing tool for deep focus",
+    default: "JustWrite | Distraction-free writing tool for deep focus",
     template: "%s | JustWrite",
   },
   description:
@@ -36,14 +36,14 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     siteName: "JustWrite",
-    title: "JustWrite — Take back your focus and start writing",
+    title: "JustWrite | Take back your focus and start writing",
     description:
       "A distraction-free writing tool that locks you in. Go fullscreen, set a timer, and write without interruptions. For journaling, novels, brainstorming, and deep work.",
     url: "https://justwrite.app",
   },
   twitter: {
     card: "summary_large_image",
-    title: "JustWrite — Distraction-free writing for deep focus",
+    title: "JustWrite | Distraction-free writing for deep focus",
     description:
       "Lock into fullscreen writing sessions. Set a timer, block distractions, and write. For journaling, novels, brainstorming, and more.",
     creator: "@justwrite",
@@ -77,7 +77,7 @@ const jsonLd = {
       price: "0",
       priceCurrency: "EUR",
       name: "Free",
-      description: "2 files, 100 pages, 20-minute sessions",
+      description: "3 files, 100 pages, 20-minute sessions, cloud storage",
     },
     {
       "@type": "Offer",

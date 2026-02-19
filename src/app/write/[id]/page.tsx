@@ -97,7 +97,7 @@ function generateCalendarEvent(days: boolean[], time: string, title: string): st
     `DTSTART:${dtStart}`,
     `DTEND:${dtEnd}`,
     `RRULE:FREQ=WEEKLY;BYDAY=${selectedDays.join(",")}`,
-    `SUMMARY:JustWrite — ${title}`,
+    `SUMMARY:JustWrite ${title}`,
     "DESCRIPTION:Time to lock in and write. Open JustWrite and start your session.",
     "BEGIN:VALARM",
     "TRIGGER:-PT10M",
@@ -198,7 +198,7 @@ export default function WritePage() {
         saveLocalFiles(files);
         setFile(files[idx]);
 
-        if (user && (plan === "cloud" || plan === "desktop")) {
+        if (user) {
           await saveCloudFile(user.id, files[idx]);
         }
       }

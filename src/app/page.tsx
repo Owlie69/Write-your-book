@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { PLANS } from "@/lib/constants";
 import { useTheme } from "@/lib/theme-context";
 
@@ -77,7 +77,7 @@ function PricingCard({
 
   return (
     <div
-      className={`relative rounded-lg border p-5 sm:p-8 flex flex-col card-elevated ${
+      className={`relative rounded-lg border p-5 sm:p-8 flex flex-col card-elevated h-full ${
         popular
           ? "border-accent bg-bg-card sm:scale-105"
           : "border-border bg-bg-card/80"
@@ -144,7 +144,7 @@ function DesktopComingSoonCard({ billing }: { billing: "yearly" | "monthly" }) {
   }
 
   return (
-    <div className="relative rounded-lg border border-border bg-bg-card/80 p-5 sm:p-8 flex flex-col card-elevated">
+    <div className="relative rounded-lg border border-border bg-bg-card/80 p-5 sm:p-8 flex flex-col card-elevated h-full">
       <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-text-dim text-white text-xs font-bold px-3 py-1 rounded-full">
         COMING SOON
       </div>
@@ -306,8 +306,52 @@ function SupportSection() {
   );
 }
 
+function SwipeDots({ count, active }: { count: number; active: number }) {
+  return (
+    <div className="flex items-center justify-center gap-2 mt-6 md:hidden">
+      {Array.from({ length: count }).map((_, i) => (
+        <div
+          key={i}
+          className={`w-2 h-2 rounded-full transition-colors ${
+            i === active ? "bg-accent" : "bg-border"
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
+
 function PricingSection() {
   const [billing, setBilling] = useState<"yearly" | "monthly">("yearly");
+  const [activeCard, setActiveCard] = useState(1);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    function handleScroll() {
+      if (!el) return;
+      const scrollLeft = el.scrollLeft;
+      const cardWidth = el.scrollWidth / 3;
+      const idx = Math.round(scrollLeft / cardWidth);
+      setActiveCard(Math.min(2, Math.max(0, idx)));
+    }
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Scroll to the popular (middle) card on mount for mobile
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const isMobile = window.innerWidth < 768;
+    if (isMobile) {
+      requestAnimationFrame(() => {
+        const cardWidth = el.scrollWidth / 3;
+        el.scrollLeft = cardWidth - (el.clientWidth - cardWidth) / 2;
+      });
+    }
+  }, []);
 
   return (
     <section id="pricing" className="px-4 sm:px-6 py-20 md:py-36 max-w-5xl mx-auto" aria-label="Pricing">
@@ -354,11 +398,29 @@ function PricingSection() {
         )}
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6 sm:gap-10 items-start">
+      {/* Desktop: grid layout */}
+      <div className="hidden md:grid md:grid-cols-3 gap-6 sm:gap-10 items-start">
         <PricingCard plan={PLANS.free} type="free" billing={billing} />
         <PricingCard plan={PLANS.cloud} type="cloud" popular billing={billing} />
         <DesktopComingSoonCard billing={billing} />
       </div>
+
+      {/* Mobile: horizontal swipe */}
+      <div
+        ref={scrollRef}
+        className="md:hidden flex gap-4 overflow-x-auto swipe-container px-2 pb-2"
+      >
+        <div className="swipe-item w-[85vw] max-w-[340px]">
+          <PricingCard plan={PLANS.free} type="free" billing={billing} />
+        </div>
+        <div className="swipe-item w-[85vw] max-w-[340px]">
+          <PricingCard plan={PLANS.cloud} type="cloud" popular billing={billing} />
+        </div>
+        <div className="swipe-item w-[85vw] max-w-[340px]">
+          <DesktopComingSoonCard billing={billing} />
+        </div>
+      </div>
+      <SwipeDots count={3} active={activeCard} />
     </section>
   );
 }
@@ -531,7 +593,7 @@ export default function LandingPage() {
                 <div className="flex items-start gap-5">
                   <div className="font-mono text-accent text-xl leading-none mt-1">&#10003;</div>
                   <div>
-                    <div className="font-mono text-sm mb-2 text-text">JustWrite &mdash; Attention holder</div>
+                    <div className="font-mono text-sm mb-2 text-text">JustWrite Attention holder</div>
                     <p className="text-text-muted text-sm leading-relaxed">Fullscreen focus, timed sessions, zero distractions, just you and the page</p>
                   </div>
                 </div>

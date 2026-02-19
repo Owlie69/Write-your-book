@@ -1,5 +1,5 @@
 // Plan limits
-export const FREE_MAX_FILES = 2;
+export const FREE_MAX_FILES = 3;
 export const FREE_MAX_PAGES = 100;
 export const CLOUD_MAX_FILES = Infinity;
 export const CLOUD_MAX_PAGES = Infinity;
@@ -24,14 +24,14 @@ export const PLANS = {
     maxFiles: FREE_MAX_FILES,
     maxPages: FREE_MAX_PAGES,
     features: [
-      "2 writing files",
+      "3 writing files",
       "100 pages per file",
       "20-minute focus sessions",
-      "Local storage",
+      "Cloud storage — access from any device",
       "Session statistics",
     ],
     customTimer: false,
-    cloudSync: false,
+    cloudSync: true,
   },
   cloud: {
     name: "Cloud",
@@ -39,10 +39,10 @@ export const PLANS = {
     maxFiles: CLOUD_MAX_FILES,
     maxPages: CLOUD_MAX_PAGES,
     features: [
-      "Unlimited files",
-      "Unlimited pages",
+      "Unlimited files & pages",
+      "Access from any device",
       "Custom session timer (5–180 min)",
-      "Cloud sync across devices",
+      "Monthly writing progress insights",
       "Download files as .txt",
       "Detailed writing statistics",
       "Email session reminders",
@@ -58,6 +58,7 @@ export const PLANS = {
     features: [
       "Everything in Cloud",
       "Native desktop app",
+      "Access from any device",
       "Blocks all other apps during sessions",
       "System-level distraction blocking",
       "Offline-first with cloud sync",

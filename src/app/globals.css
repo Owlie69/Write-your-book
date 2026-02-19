@@ -78,19 +78,30 @@
     color: var(--color-bg);
   }
 
-  /* Scrollbar */
-  ::-webkit-scrollbar {
-    width: 6px;
+  /* Scrollbar — hide on mobile, slim on desktop */
+  @media (max-width: 768px) {
+    ::-webkit-scrollbar {
+      width: 0px;
+      height: 0px;
+    }
+    html, body {
+      scrollbar-width: none;
+    }
   }
-  ::-webkit-scrollbar-track {
-    background: var(--color-bg);
-  }
-  ::-webkit-scrollbar-thumb {
-    background: var(--color-border);
-    border-radius: 3px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: var(--color-text-dim);
+  @media (min-width: 769px) {
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--color-bg);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--color-border);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--color-text-dim);
+    }
   }
 }
 
@@ -263,6 +274,20 @@
 
   html[data-theme="dark"] .card-elevated {
     box-shadow: none;
+  }
+
+  /* Mobile swipe container */
+  .swipe-container {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .swipe-container::-webkit-scrollbar {
+    display: none;
+  }
+  .swipe-item {
+    scroll-snap-align: center;
+    flex-shrink: 0;
   }
 }
 
