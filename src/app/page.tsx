@@ -88,23 +88,23 @@ function PricingCard({
           MOST POPULAR
         </div>
       )}
-      <h3 className="font-mono text-xl mb-2">{plan.name}</h3>
+      <h3 className="font-mono text-xl sm:text-2xl mb-2">{plan.name}</h3>
       <div className="mb-6">
         {plan.price === 0 ? (
-          <span className="text-3xl font-bold">Free</span>
+          <span className="text-3xl sm:text-4xl font-bold">Free</span>
         ) : (
           <>
-            <span className="text-3xl font-bold">&euro;{displayPrice}</span>
-            <span className="text-text-muted">/{billing === "yearly" ? "mo" : "mo"}</span>
+            <span className="text-3xl sm:text-4xl font-bold">&euro;{displayPrice}</span>
+            <span className="text-text-muted text-base">/mo</span>
             {billing === "yearly" && (
-              <div className="text-xs text-text-dim mt-1">billed yearly</div>
+              <div className="text-xs sm:text-sm text-text-dim mt-1">billed yearly</div>
             )}
           </>
         )}
       </div>
-      <ul className="space-y-3 mb-8 flex-1">
+      <ul className="space-y-3 sm:space-y-4 mb-8 flex-1">
         {plan.features.map((feature) => (
-          <li key={feature} className="flex items-start gap-2 text-sm text-text-muted">
+          <li key={feature} className="flex items-start gap-2 text-sm sm:text-base text-text-muted">
             <span className="text-accent mt-0.5">&#10003;</span>
             {feature}
           </li>
@@ -112,7 +112,7 @@ function PricingCard({
       </ul>
       <Link
         href={type === "free" ? "/dashboard" : "/auth/signup"}
-        className={`block text-center py-3 px-6 rounded font-mono text-sm transition-colors ${
+        className={`block text-center py-3.5 px-6 rounded font-mono text-sm sm:text-base transition-colors ${
           popular
             ? "bg-accent text-white hover:bg-accent-hover"
             : "border border-border hover:border-accent hover:text-accent"
@@ -354,11 +354,11 @@ function PricingSection() {
   }, []);
 
   return (
-    <section id="pricing" className="px-4 sm:px-6 py-20 md:py-36 max-w-5xl mx-auto" aria-label="Pricing">
-      <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif text-center mb-6">
+    <section id="pricing" className="px-4 sm:px-8 py-20 md:py-36 max-w-6xl mx-auto" aria-label="Pricing">
+      <h2 className="text-2xl sm:text-3xl md:text-5xl font-serif text-center mb-6">
         Simple pricing
       </h2>
-      <p className="text-text-muted text-center mb-10 max-w-md mx-auto leading-relaxed">
+      <p className="text-text-muted text-center mb-10 max-w-md mx-auto leading-relaxed text-base sm:text-lg">
         Start for free. Upgrade when you&apos;re ready to commit.
       </p>
 
@@ -429,32 +429,32 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-bg paper-texture">
       {/* Nav */}
-      <nav className="flex items-center justify-between px-4 sm:px-6 py-5 sm:py-6 max-w-5xl mx-auto" aria-label="Main navigation">
-        <Link href="/" className="font-mono text-xl tracking-tight">
+      <nav className="flex items-center justify-between px-4 sm:px-8 py-5 sm:py-7 max-w-6xl mx-auto" aria-label="Main navigation">
+        <Link href="/" className="font-mono text-xl sm:text-2xl tracking-tight">
           <span className="text-accent">Just</span>Write
         </Link>
         <div className="flex items-center gap-3 sm:gap-6">
           <Link
             href="#pricing"
-            className="hidden sm:inline text-text-muted hover:text-text text-sm font-mono transition-colors"
+            className="hidden sm:inline text-text-muted hover:text-text text-sm md:text-base font-mono transition-colors"
           >
             Pricing
           </Link>
           <Link
             href="#support"
-            className="hidden sm:inline text-text-muted hover:text-text text-sm font-mono transition-colors"
+            className="hidden sm:inline text-text-muted hover:text-text text-sm md:text-base font-mono transition-colors"
           >
             Support
           </Link>
           <Link
             href="/auth/signin"
-            className="hidden sm:inline text-text-muted hover:text-text text-sm font-mono transition-colors"
+            className="hidden sm:inline text-text-muted hover:text-text text-sm md:text-base font-mono transition-colors"
           >
             Sign In
           </Link>
           <Link
             href="/dashboard"
-            className="bg-accent text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded text-sm font-mono hover:bg-accent-hover transition-colors"
+            className="bg-accent text-white px-4 py-2 sm:px-5 sm:py-2.5 rounded text-sm sm:text-base font-mono hover:bg-accent-hover transition-colors"
           >
             Start Writing
           </Link>
@@ -464,31 +464,31 @@ export default function LandingPage() {
 
       <main>
         {/* Hero */}
-        <section className="px-4 sm:px-6 py-20 sm:py-36 md:py-52 max-w-3xl mx-auto text-center fade-in" aria-label="Hero">
-          <h1 className="text-3xl sm:text-4xl md:text-6xl font-serif leading-tight mb-8 sm:mb-10">
+        <section className="px-4 sm:px-8 py-20 sm:py-36 md:py-52 max-w-4xl mx-auto text-center fade-in" aria-label="Hero">
+          <h1 className="text-3xl sm:text-5xl md:text-7xl font-serif leading-tight mb-8 sm:mb-12">
             Take back your{" "}
             <TypingEffect words={["focus", "attention", "flow", "clarity", "time"]} />
             <br />
             and start writing.
           </h1>
-          <p className="text-text-muted text-lg md:text-xl mx-auto mb-6 leading-relaxed">
+          <p className="text-text-muted text-lg sm:text-xl md:text-2xl mx-auto mb-6 leading-relaxed max-w-2xl">
             Every app fights for your attention. JustWrite protects it.
             Go fullscreen, set a timer, and write without distractions.
           </p>
-          <p className="text-text-dim text-sm sm:text-base mx-auto mb-10 sm:mb-14 leading-relaxed">
+          <p className="text-text-dim text-sm sm:text-base md:text-lg mx-auto mb-10 sm:mb-14 leading-relaxed max-w-xl">
             No AI writing for you. No fancy formatting. No notifications.
             Just a blank page and your uninterrupted thoughts.
           </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-5">
             <Link
               href="/dashboard"
-              className="bg-accent text-white px-8 py-4 rounded font-mono text-lg hover:bg-accent-hover transition-colors pulse-glow"
+              className="bg-accent text-white px-8 py-4 sm:px-10 sm:py-5 rounded font-mono text-lg sm:text-xl hover:bg-accent-hover transition-colors pulse-glow"
             >
               Start Focusing — It&apos;s Free
             </Link>
             <Link
               href="#how-it-works"
-              className="border border-border px-8 py-4 rounded font-mono text-lg hover:border-accent hover:text-accent transition-colors"
+              className="border border-border px-8 py-4 sm:px-10 sm:py-5 rounded font-mono text-lg sm:text-xl hover:border-accent hover:text-accent transition-colors"
             >
               How It Works
             </Link>
@@ -528,8 +528,8 @@ export default function LandingPage() {
         <div className="max-w-3xl mx-auto px-6"><div className="border-t border-border/50" /></div>
 
         {/* How it works */}
-        <section id="how-it-works" className="px-4 sm:px-6 py-20 md:py-36 max-w-4xl mx-auto" aria-label="How it works">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif text-center mb-14 sm:mb-24">
+        <section id="how-it-works" className="px-4 sm:px-8 py-20 md:py-36 max-w-5xl mx-auto" aria-label="How it works">
+          <h2 className="text-2xl sm:text-3xl md:text-5xl font-serif text-center mb-14 sm:mb-24">
             Three steps. That&apos;s it.
           </h2>
           <div className="grid md:grid-cols-3 gap-10 md:gap-20">
@@ -551,9 +551,9 @@ export default function LandingPage() {
               },
             ].map((item) => (
               <article key={item.step} className="text-center">
-                <div className="font-mono text-accent text-4xl mb-6">{item.step}</div>
-                <h3 className="font-mono text-lg mb-4">{item.title}</h3>
-                <p className="text-text-muted text-sm leading-loose">{item.desc}</p>
+                <div className="font-mono text-accent text-4xl md:text-5xl mb-6">{item.step}</div>
+                <h3 className="font-mono text-lg md:text-xl mb-4">{item.title}</h3>
+                <p className="text-text-muted text-sm md:text-base leading-loose">{item.desc}</p>
               </article>
             ))}
           </div>
@@ -645,17 +645,17 @@ export default function LandingPage() {
         <div className="max-w-3xl mx-auto px-6"><div className="border-t border-border/50" /></div>
 
         {/* Final CTA */}
-        <section className="px-4 sm:px-6 py-20 md:py-36 max-w-2xl mx-auto text-center" aria-label="Call to action">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif mb-8">
+        <section className="px-4 sm:px-8 py-20 md:py-36 max-w-3xl mx-auto text-center" aria-label="Call to action">
+          <h2 className="text-2xl sm:text-3xl md:text-5xl font-serif mb-8">
             Stop scrolling. Start focusing.
           </h2>
-          <p className="text-text-muted mb-12 leading-loose">
+          <p className="text-text-muted mb-12 leading-loose text-base sm:text-lg md:text-xl">
             Every day you wait is another day of fragmented attention and unfinished ideas.
             Open JustWrite, set the timer, and give your thoughts the space they deserve.
           </p>
           <Link
             href="/dashboard"
-            className="inline-block bg-accent text-white px-8 py-4 rounded font-mono text-lg hover:bg-accent-hover transition-colors pulse-glow"
+            className="inline-block bg-accent text-white px-10 py-5 rounded font-mono text-lg sm:text-xl hover:bg-accent-hover transition-colors pulse-glow"
           >
             Lock In Now
           </Link>

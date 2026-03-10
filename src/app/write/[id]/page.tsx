@@ -33,6 +33,165 @@ import {
 } from "@/lib/constants";
 
 type EditorState = "setup" | "writing" | "done";
+type DownloadFormat = "txt" | "pdf" | "docx";
+
+function formatDateForFilename(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function sanitizeFilename(name: string): string {
+  return name.replace(/[^a-zA-Z0-9\s\-_]/g, "").trim() || "untitled";
+}
+
+function downloadAsTxt(content: string, title: string) {
+  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${sanitizeFilename(title)}_${formatDateForFilename()}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function downloadAsPdf(content: string, title: string) {
+  // Generate a printable HTML document and trigger print-to-PDF
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<title>${title}</title>
+<style>
+  body { font-family: Georgia, serif; font-size: 12pt; line-height: 1.8;
+         margin: 72px; color: #1a1a1a; white-space: pre-wrap; word-wrap: break-word; }
+  h1 { font-size: 18pt; margin-bottom: 8px; }
+  .meta { color: #999; font-size: 10pt; margin-bottom: 32px; }
+  @page { margin: 1in; }
+</style></head><body>
+<h1>${title}</h1>
+<div class="meta">${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</div>
+${content}</body></html>`;
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const printWindow = window.open(url, "_blank");
+  if (printWindow) {
+    printWindow.onload = () => {
+      printWindow.print();
+    };
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+function downloadAsDocx(content: string, title: string) {
+  // Generate a simple .docx-compatible XML file
+  const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  const escapedContent = content
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .split("\n")
+    .map((line) => `<w:p><w:r><w:t xml:space="preserve">${line}</w:t></w:r></w:p>`)
+    .join("");
+  const escapedTitle = title.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  const docx = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<?mso-application progid="Word.Document"?>
+<w:wordDocument xmlns:w="http://schemas.microsoft.com/office/word/2003/wordml">
+<w:body>
+<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>${escapedTitle}</w:t></w:r></w:p>
+<w:p><w:r><w:rPr><w:color w:val="999999"/><w:sz w:val="20"/></w:rPr><w:t>${date}</w:t></w:r></w:p>
+<w:p/>
+${escapedContent}
+</w:body></w:wordDocument>`;
+
+  const blob = new Blob([docx], { type: "application/vnd.ms-word;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${sanitizeFilename(title)}_${formatDateForFilename()}.doc`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function DownloadPopup({
+  title,
+  content,
+  onClose,
+}: {
+  title: string;
+  content: string;
+  onClose: () => void;
+}) {
+  const filename = `${sanitizeFilename(title)}_${formatDateForFilename()}`;
+
+  function handleDownload(format: DownloadFormat) {
+    switch (format) {
+      case "txt":
+        downloadAsTxt(content, title);
+        break;
+      case "pdf":
+        downloadAsPdf(content, title);
+        break;
+      case "docx":
+        downloadAsDocx(content, title);
+        break;
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center px-4">
+      <div className="absolute inset-0 bg-bg/80 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-md bg-bg-card border border-border rounded-xl p-6 sm:p-8 card-elevated fade-in">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-text-dim hover:text-text transition-colors font-mono text-lg"
+        >
+          &times;
+        </button>
+
+        <h3 className="font-mono text-lg sm:text-xl mb-2 text-center">Download Your Writing</h3>
+        <p className="text-text-dim text-xs sm:text-sm text-center mb-6 font-mono">{filename}</p>
+
+        <div className="space-y-3">
+          <button
+            onClick={() => handleDownload("txt")}
+            className="w-full flex items-center justify-between border border-border rounded-lg px-5 py-4 hover:border-accent hover:text-accent transition-colors group"
+          >
+            <div className="text-left">
+              <div className="font-mono text-sm sm:text-base">Plain Text</div>
+              <div className="text-text-dim text-xs mt-0.5">.txt file</div>
+            </div>
+            <span className="text-text-dim group-hover:text-accent text-lg">&#8615;</span>
+          </button>
+
+          <button
+            onClick={() => handleDownload("pdf")}
+            className="w-full flex items-center justify-between border border-border rounded-lg px-5 py-4 hover:border-accent hover:text-accent transition-colors group"
+          >
+            <div className="text-left">
+              <div className="font-mono text-sm sm:text-base">PDF Document</div>
+              <div className="text-text-dim text-xs mt-0.5">Print-ready format</div>
+            </div>
+            <span className="text-text-dim group-hover:text-accent text-lg">&#8615;</span>
+          </button>
+
+          <button
+            onClick={() => handleDownload("docx")}
+            className="w-full flex items-center justify-between border border-border rounded-lg px-5 py-4 hover:border-accent hover:text-accent transition-colors group"
+          >
+            <div className="text-left">
+              <div className="font-mono text-sm sm:text-base">Word Document</div>
+              <div className="text-text-dim text-xs mt-0.5">.doc file</div>
+            </div>
+            <span className="text-text-dim group-hover:text-accent text-lg">&#8615;</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface SessionStats {
   wordsAdded: number;
@@ -131,6 +290,7 @@ export default function WritePage() {
   const [sessionStats, setSessionStats] = useState<SessionStats | null>(null);
   const [showDissuasive, setShowDissuasive] = useState(false);
   const [dissuasiveMsg, setDissuasiveMsg] = useState(DISSUASIVE_MESSAGES[0]);
+  const [showDownload, setShowDownload] = useState(false);
 
   // Pagination
   const [pages, setPages] = useState<string[]>([""]);
@@ -528,9 +688,9 @@ export default function WritePage() {
 
     return (
       <div className="min-h-screen bg-bg paper-texture flex items-center justify-center px-6">
-        <div className="w-full max-w-sm text-center fade-in">
+        <div className="w-full max-w-md text-center fade-in">
           <div className="flex items-center justify-between mb-16">
-            <Link href="/dashboard" className="text-text-dim hover:text-text-muted text-sm font-mono transition-colors">
+            <Link href="/dashboard" className="text-text-dim hover:text-text-muted text-sm sm:text-base font-mono transition-colors">
               &larr; Back
             </Link>
             <button onClick={toggleTheme} className="theme-toggle" aria-label="Toggle theme">
@@ -538,14 +698,14 @@ export default function WritePage() {
             </button>
           </div>
 
-          <h1 className="font-mono text-2xl mb-3">{file.title}</h1>
-          <p className="text-text-muted text-sm mb-16">
+          <h1 className="font-mono text-2xl sm:text-3xl mb-3">{file.title}</h1>
+          <p className="text-text-muted text-sm sm:text-base mb-16">
             {wordCount} words &middot; {calculatePageCount(file.content)} pages
           </p>
 
           {/* Timer setting */}
-          <div className="border border-border rounded-lg p-8 bg-bg-card card-elevated mb-12">
-            <label className="block text-sm font-mono text-text-muted mb-5">
+          <div className="border border-border rounded-xl p-8 sm:p-10 bg-bg-card card-elevated mb-12">
+            <label className="block text-sm sm:text-base font-mono text-text-muted mb-5">
               Session Length
             </label>
             {canCustomize ? (
@@ -591,12 +751,12 @@ export default function WritePage() {
           {/* Start button */}
           <button
             onClick={startSession}
-            className="w-full bg-accent text-white py-4 rounded font-mono text-lg hover:bg-accent-hover transition-colors pulse-glow"
+            className="w-full bg-accent text-white py-5 rounded font-mono text-lg sm:text-xl hover:bg-accent-hover transition-colors pulse-glow"
           >
             Lock In &amp; Write
           </button>
 
-          <p className="text-text-dim text-xs mt-6 leading-relaxed">
+          <p className="text-text-dim text-xs sm:text-sm mt-6 leading-relaxed">
             Once you start, the app goes fullscreen.
             <br />
             No going back until the timer runs out.
@@ -622,6 +782,15 @@ export default function WritePage() {
 
     return (
       <div className="fixed inset-0 bg-bg-warm z-50 flex flex-col editor-page-container">
+        {/* Download popup */}
+        {showDownload && (
+          <DownloadPopup
+            title={file.title}
+            content={contentRef.current}
+            onClose={() => setShowDownload(false)}
+          />
+        )}
+
         {/* Dissuasive overlay */}
         {showDissuasive && (
           <div className="fixed inset-0 z-[100] dissuasive-overlay flex items-center justify-center px-6">
@@ -653,7 +822,7 @@ export default function WritePage() {
         {/* Top bar */}
         <div className="relative flex items-center justify-between px-3 sm:px-8 py-3 border-b border-border/50">
           <span className="font-mono text-xs sm:text-sm text-text-dim truncate max-w-[100px] sm:max-w-none">{file.title}</span>
-          <div className={`absolute left-1/2 -translate-x-1/2 font-mono text-base sm:text-lg ${isLowTime ? "text-danger" : "text-accent"}`}>
+          <div className={`absolute left-1/2 -translate-x-1/2 font-mono text-lg sm:text-xl ${isLowTime ? "text-danger" : "text-accent"}`}>
             {formatTime(timeLeft)}
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
@@ -666,7 +835,7 @@ export default function WritePage() {
                   <button
                     key={key}
                     onClick={() => handleTextSizeChange(key)}
-                    className={`w-7 h-7 rounded text-xs font-mono transition-colors ${
+                    className={`w-8 h-8 rounded text-sm font-mono transition-colors ${
                       settings.textSize === key ? "bg-accent/20 text-accent" : "text-text-dim hover:text-text-muted"
                     }`}
                   >
@@ -677,18 +846,8 @@ export default function WritePage() {
             </div>
             {plan !== "free" ? (
               <button
-                onClick={() => {
-                  const blob = new Blob([contentRef.current], { type: "text/plain;charset=utf-8" });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url;
-                  a.download = `${file.title.replace(/[^a-zA-Z0-9\s\-_]/g, "").trim() || "untitled"}.txt`;
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
-                  URL.revokeObjectURL(url);
-                }}
-                className="w-7 h-7 rounded text-xs font-mono text-text-dim hover:text-accent transition-colors flex items-center justify-center"
+                onClick={() => setShowDownload(true)}
+                className="w-8 h-8 rounded text-sm font-mono text-text-dim hover:text-accent transition-colors flex items-center justify-center"
                 title="Download file"
                 aria-label="Download file"
               >
@@ -696,7 +855,7 @@ export default function WritePage() {
               </button>
             ) : (
               <button
-                className="w-7 h-7 rounded text-xs font-mono text-text-dim opacity-40 cursor-not-allowed flex items-center justify-center"
+                className="w-8 h-8 rounded text-sm font-mono text-text-dim opacity-40 cursor-not-allowed flex items-center justify-center"
                 title="Upgrade to Cloud to download files"
                 aria-label="Download unavailable on free plan"
                 disabled
@@ -789,31 +948,31 @@ export default function WritePage() {
 
   return (
     <div className="min-h-screen bg-bg paper-texture">
-      <div className="max-w-lg mx-auto px-4 sm:px-6 py-12 sm:py-20 text-center fade-in">
-        <div className="text-accent text-5xl sm:text-6xl mb-6">&#10003;</div>
-        <h1 className="font-mono text-xl sm:text-2xl mb-3">Session Complete</h1>
-        <p className="text-text-muted mb-12 leading-relaxed">
+      <div className="max-w-xl mx-auto px-4 sm:px-8 py-12 sm:py-20 text-center fade-in">
+        <div className="text-accent text-5xl sm:text-7xl mb-6">&#10003;</div>
+        <h1 className="font-mono text-2xl sm:text-3xl mb-3">Session Complete</h1>
+        <p className="text-text-muted text-base sm:text-lg mb-12 leading-relaxed">
           You stayed locked in and wrote. That&apos;s what matters.
         </p>
 
         {/* Stats card */}
         {stats && (
-          <div className="border border-border rounded-lg p-5 sm:p-8 bg-bg-card card-elevated mb-8">
-            <h2 className="font-mono text-sm text-text-muted mb-6 uppercase tracking-wider">
+          <div className="border border-border rounded-xl p-6 sm:p-10 bg-bg-card card-elevated mb-8">
+            <h2 className="font-mono text-sm sm:text-base text-text-muted mb-6 uppercase tracking-wider">
               Your Session
             </h2>
             <div className="grid grid-cols-3 gap-3 sm:gap-6 mb-8">
               <div>
-                <div className="font-mono text-2xl sm:text-3xl text-accent">{stats.durationMinutes}</div>
-                <div className="text-text-dim text-xs mt-1">minutes</div>
+                <div className="font-mono text-3xl sm:text-4xl text-accent">{stats.durationMinutes}</div>
+                <div className="text-text-dim text-xs sm:text-sm mt-1">minutes</div>
               </div>
               <div>
-                <div className="font-mono text-2xl sm:text-3xl text-accent">+{Math.max(0, stats.netWords)}</div>
-                <div className="text-text-dim text-xs mt-1">net words</div>
+                <div className="font-mono text-3xl sm:text-4xl text-accent">+{Math.max(0, stats.netWords)}</div>
+                <div className="text-text-dim text-xs sm:text-sm mt-1">net words</div>
               </div>
               <div>
-                <div className="font-mono text-2xl sm:text-3xl text-accent">{stats.totalPages}</div>
-                <div className="text-text-dim text-xs mt-1">total pages</div>
+                <div className="font-mono text-3xl sm:text-4xl text-accent">{stats.totalPages}</div>
+                <div className="text-text-dim text-xs sm:text-sm mt-1">total pages</div>
               </div>
             </div>
 
@@ -966,42 +1125,41 @@ export default function WritePage() {
           </div>
         </div>
 
+        {/* Download popup */}
+        {showDownload && (
+          <DownloadPopup
+            title={file.title}
+            content={contentRef.current}
+            onClose={() => setShowDownload(false)}
+          />
+        )}
+
         {/* Action buttons */}
         <div className="flex flex-col gap-4">
           <button
             onClick={() => setEditorState("setup")}
-            className="w-full bg-accent text-white py-3.5 rounded font-mono text-sm hover:bg-accent-hover transition-colors"
+            className="w-full bg-accent text-white py-4 rounded font-mono text-base hover:bg-accent-hover transition-colors"
           >
             Write Again
           </button>
           {plan !== "free" ? (
             <button
-              onClick={() => {
-                const blob = new Blob([contentRef.current], { type: "text/plain;charset=utf-8" });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `${file.title.replace(/[^a-zA-Z0-9\s\-_]/g, "").trim() || "untitled"}.txt`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-              }}
-              className="w-full border border-accent text-accent py-3.5 rounded font-mono text-sm hover:bg-accent hover:text-white transition-colors"
+              onClick={() => setShowDownload(true)}
+              className="w-full border border-accent text-accent py-4 rounded font-mono text-base hover:bg-accent hover:text-white transition-colors"
             >
               Download
             </button>
           ) : (
             <Link
               href="/#pricing"
-              className="w-full border border-border py-3.5 rounded font-mono text-sm text-text-dim hover:border-accent hover:text-accent transition-colors block text-center"
+              className="w-full border border-border py-4 rounded font-mono text-base text-text-dim hover:border-accent hover:text-accent transition-colors block text-center"
             >
               Upgrade to Download Files
             </Link>
           )}
           <Link
             href="/dashboard"
-            className="w-full border border-border py-3.5 rounded font-mono text-sm hover:border-accent hover:text-accent transition-colors block text-center"
+            className="w-full border border-border py-4 rounded font-mono text-base hover:border-accent hover:text-accent transition-colors block text-center"
           >
             Back to Dashboard
           </Link>

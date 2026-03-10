@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured } from "./supabase";
 import { CHARS_PER_PAGE, FREE_MAX_FILES, FREE_MAX_PAGES } from "./constants";
 import type { PlanType } from "./constants";
+import { encryptContent, decryptContent } from "./crypto";
 
 export interface WritingFile {
   id: string;
@@ -202,14 +203,20 @@ export async function getCloudFiles(userId: string): Promise<WritingFile[]> {
     return [];
   }
 
-  return (data || []).map((row) => ({
-    id: row.id,
-    title: row.title,
-    content: row.content,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    pageCount: calculatePageCount(row.content),
-  }));
+  const files: WritingFile[] = [];
+  for (const row of data || []) {
+    const content = await decryptContent(userId, row.content);
+    const title = await decryptContent(userId, row.title);
+    files.push({
+      id: row.id,
+      title,
+      content,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      pageCount: calculatePageCount(content),
+    });
+  }
+  return files;
 }
 
 export async function saveCloudFile(
@@ -217,11 +224,13 @@ export async function saveCloudFile(
   file: WritingFile
 ): Promise<void> {
   if (!isSupabaseConfigured()) return;
+  const encryptedTitle = await encryptContent(userId, file.title);
+  const encryptedContent = await encryptContent(userId, file.content);
   const { error } = await supabase.from("files").upsert({
     id: file.id,
     user_id: userId,
-    title: file.title,
-    content: file.content,
+    title: encryptedTitle,
+    content: encryptedContent,
     created_at: file.createdAt,
     updated_at: new Date().toISOString(),
   });

@@ -76,8 +76,8 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-bg paper-texture">
       {/* Nav */}
-      <nav className="flex items-center justify-between px-4 sm:px-6 py-5 sm:py-6 max-w-3xl mx-auto">
-        <Link href="/" className="font-mono text-xl tracking-tight">
+      <nav className="flex items-center justify-between px-4 sm:px-8 py-5 sm:py-7 max-w-4xl mx-auto">
+        <Link href="/" className="font-mono text-xl sm:text-2xl tracking-tight">
           <span className="text-accent">Just</span>Write
         </Link>
         <div className="flex items-center gap-2 sm:gap-4">
@@ -115,10 +115,10 @@ export default function DashboardPage() {
       </nav>
 
       {/* Content — centered, narrow, breathable */}
-      <div className="px-4 sm:px-6 py-10 sm:py-16 max-w-2xl mx-auto">
+      <div className="px-4 sm:px-8 py-10 sm:py-16 max-w-3xl mx-auto">
         <div className="text-center mb-10 sm:mb-16">
-          <h1 className="font-mono text-2xl sm:text-3xl mb-3">Your Writing</h1>
-          <p className="text-text-muted text-sm">
+          <h1 className="font-mono text-2xl sm:text-4xl mb-3">Your Writing</h1>
+          <p className="text-text-muted text-sm sm:text-base">
             {files.length}
             {plan === "free" ? ` / ${FREE_MAX_FILES}` : ""} file
             {files.length !== 1 ? "s" : ""}
@@ -206,9 +206,9 @@ export default function DashboardPage() {
                 <Link
                   key={file.id}
                   href={`/write/${file.id}`}
-                  className="block border border-border rounded-lg p-5 sm:p-8 bg-bg-card card-elevated hover:bg-bg-card-hover hover:border-accent/40 transition-colors group text-center cursor-pointer"
+                  className="block border border-border rounded-xl p-6 sm:p-10 bg-bg-card card-elevated hover:bg-bg-card-hover hover:border-accent/40 transition-colors group text-center cursor-pointer"
                 >
-                  <h3 className="font-mono text-lg sm:text-xl mb-2 sm:mb-3">{file.title}</h3>
+                  <h3 className="font-mono text-xl sm:text-2xl mb-2 sm:mb-3">{file.title}</h3>
                   <div className="flex items-center justify-center gap-2 sm:gap-4 text-xs sm:text-sm text-text-muted mb-3 sm:mb-4 flex-wrap">
                     <span>
                       {pageCount}{plan === "free" ? ` / ${maxPages}` : ""} page{pageCount !== 1 ? "s" : ""}

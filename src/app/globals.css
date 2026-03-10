@@ -165,9 +165,15 @@
   }
 
   /* Text sizes for the editor */
-  .text-size-small { font-size: 14px; }
-  .text-size-medium { font-size: 18px; }
-  .text-size-large { font-size: 22px; }
+  .text-size-small { font-size: 16px; }
+  .text-size-medium { font-size: 20px; }
+  .text-size-large { font-size: 24px; }
+
+  @media (min-width: 1440px) {
+    .text-size-small { font-size: 17px; }
+    .text-size-medium { font-size: 21px; }
+    .text-size-large { font-size: 26px; }
+  }
 
   /* ======== Word-like paper pages ======== */
   .paper-page {
@@ -215,9 +221,9 @@
 
   /* ======== A4 page dimensions ======== */
   .a4-page {
-    width: 680px;
-    height: 960px;
-    padding: 64px 72px 64px 88px;
+    width: 720px;
+    height: 1020px;
+    padding: 72px 80px 72px 96px;
     flex-shrink: 0;
     overflow: hidden;
   }
@@ -227,8 +233,16 @@
       width: 100%;
       max-width: 520px;
       height: auto;
-      min-height: 700px;
-      padding: 40px 32px 40px 44px;
+      min-height: 680px;
+      padding: 36px 28px 36px 40px;
+    }
+  }
+
+  @media (min-width: 1440px) {
+    .a4-page {
+      width: 780px;
+      height: 1100px;
+      padding: 80px 88px 80px 104px;
     }
   }
 
@@ -248,8 +262,8 @@
 
   /* Theme toggle button */
   .theme-toggle {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     border: 1px solid var(--color-border);
     background: var(--color-bg-card);
@@ -259,7 +273,15 @@
     justify-content: center;
     cursor: pointer;
     transition: all 0.2s;
-    font-size: 16px;
+    font-size: 18px;
+  }
+
+  @media (max-width: 768px) {
+    .theme-toggle {
+      width: 36px;
+      height: 36px;
+      font-size: 16px;
+    }
   }
 
   .theme-toggle:hover {
