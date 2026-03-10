@@ -268,6 +268,207 @@ function generateCalendarEvent(days: boolean[], time: string, title: string): st
   ].join("\r\n");
 }
 
+// Ambient sound definitions
+const AMBIENT_SOUNDS = [
+  { id: "rain", label: "Rain", icon: "\u{1F327}", frequency: 200 },
+  { id: "cafe", label: "Cafe", icon: "\u{2615}", frequency: 300 },
+  { id: "fire", label: "Fireplace", icon: "\u{1F525}", frequency: 150 },
+  { id: "forest", label: "Forest", icon: "\u{1F333}", frequency: 250 },
+  { id: "waves", label: "Waves", icon: "\u{1F30A}", frequency: 180 },
+  { id: "whitenoise", label: "White Noise", icon: "\u{1F4AC}", frequency: 0 },
+] as const;
+
+type AmbientSoundId = typeof AMBIENT_SOUNDS[number]["id"];
+
+// Generate ambient sound using Web Audio API (no external files needed)
+function createAmbientSound(audioCtx: AudioContext, soundId: AmbientSoundId): { start: () => void; stop: () => void } {
+  let nodes: AudioNode[] = [];
+  let running = false;
+
+  function start() {
+    if (running) return;
+    running = true;
+
+    const gainNode = audioCtx.createGain();
+    gainNode.gain.value = 0.15;
+    gainNode.connect(audioCtx.destination);
+
+    if (soundId === "whitenoise") {
+      // White noise via buffer
+      const bufferSize = audioCtx.sampleRate * 2;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      const source = audioCtx.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.value = 3000;
+      source.connect(filter);
+      filter.connect(gainNode);
+      source.start();
+      nodes = [source, filter, gainNode];
+    } else if (soundId === "rain") {
+      // Rain: filtered noise with modulation
+      const bufferSize = audioCtx.sampleRate * 2;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      const source = audioCtx.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      const bp = audioCtx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.value = 800;
+      bp.Q.value = 0.5;
+      source.connect(bp);
+      bp.connect(gainNode);
+      source.start();
+      nodes = [source, bp, gainNode];
+    } else if (soundId === "cafe") {
+      // Cafe: low rumble noise
+      const bufferSize = audioCtx.sampleRate * 2;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      const source = audioCtx.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      const lp = audioCtx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.value = 400;
+      const hp = audioCtx.createBiquadFilter();
+      hp.type = "highpass";
+      hp.frequency.value = 80;
+      source.connect(lp);
+      lp.connect(hp);
+      hp.connect(gainNode);
+      source.start();
+      nodes = [source, lp, hp, gainNode];
+    } else if (soundId === "fire") {
+      // Fire: crackling noise
+      const bufferSize = audioCtx.sampleRate * 2;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * (Math.random() > 0.7 ? 1 : 0.2);
+      }
+      const source = audioCtx.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      const bp = audioCtx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.value = 500;
+      bp.Q.value = 1;
+      source.connect(bp);
+      bp.connect(gainNode);
+      source.start();
+      nodes = [source, bp, gainNode];
+    } else if (soundId === "forest") {
+      // Forest: high-pitched filtered noise
+      const bufferSize = audioCtx.sampleRate * 2;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+      const source = audioCtx.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      const bp = audioCtx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.value = 2000;
+      bp.Q.value = 0.3;
+      gainNode.gain.value = 0.08;
+      source.connect(bp);
+      bp.connect(gainNode);
+      source.start();
+      nodes = [source, bp, gainNode];
+    } else if (soundId === "waves") {
+      // Waves: low noise with slow modulation
+      const bufferSize = audioCtx.sampleRate * 4;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        const t = i / audioCtx.sampleRate;
+        const wave = Math.sin(t * 0.3 * Math.PI * 2) * 0.5 + 0.5;
+        data[i] = (Math.random() * 2 - 1) * wave;
+      }
+      const source = audioCtx.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      const lp = audioCtx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.value = 600;
+      source.connect(lp);
+      lp.connect(gainNode);
+      source.start();
+      nodes = [source, lp, gainNode];
+    }
+  }
+
+  function stop() {
+    running = false;
+    for (const node of nodes) {
+      try {
+        if ("stop" in node && typeof (node as AudioBufferSourceNode).stop === "function") {
+          (node as AudioBufferSourceNode).stop();
+        }
+        node.disconnect();
+      } catch { /* ignore */ }
+    }
+    nodes = [];
+  }
+
+  return { start, stop };
+}
+
+// SVG Progress Ring component for word count goal
+function ProgressRing({
+  progress,
+  size,
+  strokeWidth,
+  children,
+}: {
+  progress: number;
+  size: number;
+  strokeWidth: number;
+  children: React.ReactNode;
+}) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const offset = circumference - Math.min(1, Math.max(0, progress)) * circumference;
+
+  return (
+    <div className="relative inline-flex items-center justify-center">
+      <svg width={size} height={size} className="transform -rotate-90">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="var(--color-border)"
+          strokeWidth={strokeWidth}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke={progress >= 1 ? "var(--color-success)" : "var(--color-accent)"}
+          strokeWidth={strokeWidth}
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          className="transition-all duration-500 ease-out"
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        {children}
+      </div>
+    </div>
+  );
+}
+
 const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
 
 export default function WritePage() {
@@ -291,6 +492,24 @@ export default function WritePage() {
   const [showDissuasive, setShowDissuasive] = useState(false);
   const [dissuasiveMsg, setDissuasiveMsg] = useState(DISSUASIVE_MESSAGES[0]);
   const [showDownload, setShowDownload] = useState(false);
+
+  // Word count goal
+  const [wordGoal, setWordGoal] = useState(500);
+  const [goalReached, setGoalReached] = useState(false);
+
+  // Ambient sounds
+  const [activeSound, setActiveSound] = useState<AmbientSoundId | null>(null);
+  const [showSoundPicker, setShowSoundPicker] = useState(false);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const activeSoundRef = useRef<{ start: () => void; stop: () => void } | null>(null);
+
+  // Writing buddy
+  const [buddyEmail, setBuddyEmail] = useState("");
+  const [buddySaved, setBuddySaved] = useState(false);
+
+  // Push notifications
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushError, setPushError] = useState<string | null>(null);
 
   // Pagination
   const [pages, setPages] = useState<string[]>([""]);
@@ -405,6 +624,13 @@ export default function WritePage() {
       wordsAdded: totalWordsAddedRef.current,
     });
     setStreak(calculateStreak(getSessionHistory()));
+
+    // Stop ambient sound
+    if (activeSoundRef.current) {
+      activeSoundRef.current.stop();
+      activeSoundRef.current = null;
+    }
+    setActiveSound(null);
 
     setEditorState("done");
     exitFullscreen();
@@ -523,6 +749,7 @@ export default function WritePage() {
     setReminderSent(false);
     setReminderError(null);
     setShowDissuasive(false);
+    setGoalReached(false);
     setEditorState("writing");
     enterFullscreen();
 
@@ -598,13 +825,66 @@ export default function WritePage() {
 
     setWordCount(wc);
     setCharCount(fullContent.length);
-    setSessionWordCount(wc - startWordCountRef.current);
+    const swc = wc - startWordCountRef.current;
+    setSessionWordCount(swc);
+
+    // Check word goal
+    if (plan !== "free" && swc >= wordGoal && !goalReached) {
+      setGoalReached(true);
+    }
   }
 
   function goToPage(idx: number) {
     if (idx < 0 || idx >= pages.length) return;
     setCurrentPageIndex(idx);
     setTimeout(() => textareaRef.current?.focus(), 50);
+  }
+
+  function toggleAmbientSound(soundId: AmbientSoundId) {
+    if (plan === "free") return;
+
+    // Stop current sound
+    if (activeSoundRef.current) {
+      activeSoundRef.current.stop();
+      activeSoundRef.current = null;
+    }
+
+    // If same sound, just turn off
+    if (activeSound === soundId) {
+      setActiveSound(null);
+      return;
+    }
+
+    // Create audio context if needed
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new AudioContext();
+    }
+
+    const sound = createAmbientSound(audioCtxRef.current, soundId);
+    sound.start();
+    activeSoundRef.current = sound;
+    setActiveSound(soundId);
+  }
+
+  async function requestPushPermission() {
+    if (plan === "free") return;
+    try {
+      if (!("Notification" in window)) {
+        setPushError("Push notifications not supported in this browser");
+        return;
+      }
+      const permission = await Notification.requestPermission();
+      if (permission === "granted") {
+        setPushEnabled(true);
+        setPushError(null);
+        // Store preference
+        localStorage.setItem("justwrite_push_enabled", "true");
+      } else {
+        setPushError("Permission denied. Enable in browser settings.");
+      }
+    } catch {
+      setPushError("Failed to enable notifications");
+    }
   }
 
   function handleTextSizeChange(size: TextSize) {
@@ -748,6 +1028,44 @@ export default function WritePage() {
             </p>
           </div>
 
+          {/* Word goal setting */}
+          {plan !== "free" ? (
+            <div className="border border-border rounded-xl p-6 sm:p-8 bg-bg-card card-elevated mb-12">
+              <label className="block text-sm sm:text-base font-mono text-text-muted mb-4">
+                Word Goal
+              </label>
+              <div className="flex items-center justify-center gap-6">
+                <button
+                  onClick={() => setWordGoal((g) => Math.max(50, g - 50))}
+                  className="w-10 h-10 rounded border border-border hover:border-accent text-text-muted hover:text-accent transition-colors font-mono text-lg"
+                >
+                  -
+                </button>
+                <div className="font-mono text-3xl text-accent w-24 text-center">{wordGoal}</div>
+                <button
+                  onClick={() => setWordGoal((g) => Math.min(5000, g + 50))}
+                  className="w-10 h-10 rounded border border-border hover:border-accent text-text-muted hover:text-accent transition-colors font-mono text-lg"
+                >
+                  +
+                </button>
+              </div>
+              <p className="text-text-dim text-xs mt-3 font-mono">words this session</p>
+            </div>
+          ) : (
+            <div className="relative border border-border rounded-xl p-6 bg-bg-card card-elevated mb-12 overflow-hidden">
+              <div className="opacity-30 blur-[1px] pointer-events-none select-none text-center">
+                <label className="block text-sm font-mono text-text-muted mb-4">Word Goal</label>
+                <div className="font-mono text-3xl text-accent">500</div>
+                <p className="text-text-dim text-xs mt-3 font-mono">words this session</p>
+              </div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Link href="/#pricing" className="text-accent hover:underline font-mono text-sm">
+                  Upgrade for Word Goals
+                </Link>
+              </div>
+            </div>
+          )}
+
           {/* Start button */}
           <button
             onClick={startSession}
@@ -822,8 +1140,18 @@ export default function WritePage() {
         {/* Top bar */}
         <div className="relative flex items-center justify-between px-3 sm:px-8 py-3 border-b border-border/50">
           <span className="font-mono text-xs sm:text-sm text-text-dim truncate max-w-[100px] sm:max-w-none">{file.title}</span>
-          <div className={`absolute left-1/2 -translate-x-1/2 font-mono text-lg sm:text-xl ${isLowTime ? "text-danger" : "text-accent"}`}>
-            {formatTime(timeLeft)}
+          <div className="absolute left-1/2 -translate-x-1/2">
+            {plan !== "free" ? (
+              <ProgressRing progress={sessionWordCount / wordGoal} size={52} strokeWidth={3}>
+                <span className={`font-mono text-base sm:text-lg ${isLowTime ? "text-danger" : goalReached ? "text-success" : "text-accent"}`}>
+                  {formatTime(timeLeft)}
+                </span>
+              </ProgressRing>
+            ) : (
+              <span className={`font-mono text-lg sm:text-xl ${isLowTime ? "text-danger" : "text-accent"}`}>
+                {formatTime(timeLeft)}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
             <span className="text-xs font-mono text-text-dim hidden sm:inline">
@@ -917,9 +1245,75 @@ export default function WritePage() {
           </div>
         </div>
 
+        {/* Ambient sound picker overlay */}
+        {showSoundPicker && (
+          <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center px-4 pb-20 sm:pb-0">
+            <div className="absolute inset-0 bg-bg/60 backdrop-blur-sm" onClick={() => setShowSoundPicker(false)} />
+            <div className="relative w-full max-w-sm bg-bg-card border border-border rounded-xl p-5 sm:p-6 card-elevated fade-in">
+              <h3 className="font-mono text-sm text-text-muted mb-4 text-center uppercase tracking-wider">Ambient Sounds</h3>
+              {plan !== "free" ? (
+                <div className="grid grid-cols-3 gap-2">
+                  {AMBIENT_SOUNDS.map((sound) => (
+                    <button
+                      key={sound.id}
+                      onClick={() => {
+                        toggleAmbientSound(sound.id);
+                        setShowSoundPicker(false);
+                      }}
+                      className={`flex flex-col items-center gap-1 p-3 rounded-lg border transition-colors ${
+                        activeSound === sound.id
+                          ? "border-accent bg-accent/10 text-accent"
+                          : "border-border text-text-dim hover:border-accent hover:text-accent"
+                      }`}
+                    >
+                      <span className="text-xl">{sound.icon}</span>
+                      <span className="font-mono text-[10px]">{sound.label}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-text-dim text-sm mb-3">Ambient sounds help you focus while writing.</p>
+                  <Link href="/#pricing" className="text-accent hover:underline font-mono text-sm" onClick={() => setShowSoundPicker(false)}>
+                    Upgrade to Unlock
+                  </Link>
+                </div>
+              )}
+              {activeSound && plan !== "free" && (
+                <button
+                  onClick={() => { toggleAmbientSound(activeSound); setShowSoundPicker(false); }}
+                  className="w-full mt-3 border border-border py-2 rounded font-mono text-xs text-text-dim hover:text-accent transition-colors"
+                >
+                  Stop Sound
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Goal reached celebration */}
+        {goalReached && plan !== "free" && (
+          <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[120] bg-success/90 text-white px-6 py-3 rounded-lg font-mono text-sm fade-in shadow-lg">
+            Goal reached! {sessionWordCount}/{wordGoal} words
+          </div>
+        )}
+
         {/* Bottom bar */}
         <div className="flex items-center justify-between px-3 sm:px-8 py-3 border-t border-border/50 text-xs font-mono text-text-dim-extra">
-          <span className="hidden sm:inline">+{sessionWordCount} this session</span>
+          <div className="flex items-center gap-3">
+            <span className="hidden sm:inline">
+              +{sessionWordCount}{plan !== "free" ? `/${wordGoal}` : ""} this session
+            </span>
+            <button
+              onClick={() => setShowSoundPicker(!showSoundPicker)}
+              className={`px-2 py-1 rounded transition-colors ${
+                activeSound ? "text-accent" : plan === "free" ? "opacity-40" : "hover:text-accent"
+              }`}
+              title={plan === "free" ? "Upgrade for ambient sounds" : "Ambient sounds"}
+            >
+              {activeSound ? AMBIENT_SOUNDS.find(s => s.id === activeSound)?.icon || "\u{1F3B5}" : "\u{1F3B5}"}
+            </button>
+          </div>
           <div className="flex items-center gap-4">
             <button
               onClick={() => goToPage(currentPageIndex - 1)}
@@ -1133,6 +1527,115 @@ export default function WritePage() {
             onClose={() => setShowDownload(false)}
           />
         )}
+
+        {/* Export & Sharing Tools */}
+        <div className="border border-border rounded-xl p-5 sm:p-8 bg-bg-card card-elevated mb-8">
+          <h2 className="font-mono text-sm text-text-muted mb-4 uppercase tracking-wider text-center">
+            Share & Export
+          </h2>
+
+          {plan !== "free" ? (
+            <div className="space-y-4">
+              {/* Export buttons */}
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => {
+                    const text = encodeURIComponent(contentRef.current);
+                    window.open(`https://docs.google.com/document/create?title=${encodeURIComponent(file.title)}&body=${text.slice(0, 5000)}`, "_blank");
+                  }}
+                  className="border border-border rounded-lg px-4 py-3 font-mono text-xs sm:text-sm text-text-muted hover:border-accent hover:text-accent transition-colors text-center"
+                >
+                  Export to Google Docs
+                </button>
+                <button
+                  onClick={() => {
+                    // Copy content as Notion-compatible markdown to clipboard
+                    const markdown = `# ${file.title}\n\n${contentRef.current}`;
+                    navigator.clipboard.writeText(markdown).then(() => {
+                      alert("Copied to clipboard! Paste into Notion.");
+                    });
+                  }}
+                  className="border border-border rounded-lg px-4 py-3 font-mono text-xs sm:text-sm text-text-muted hover:border-accent hover:text-accent transition-colors text-center"
+                >
+                  Copy for Notion
+                </button>
+              </div>
+
+              {/* Writing buddy */}
+              <div className="border-t border-border pt-4">
+                <h3 className="font-mono text-xs text-text-dim mb-3 uppercase tracking-wider">Writing Buddy</h3>
+                <p className="text-text-dim text-xs mb-3 leading-relaxed">
+                  Share your session results with a friend for accountability.
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    value={buddyEmail}
+                    onChange={(e) => { setBuddyEmail(e.target.value); setBuddySaved(false); }}
+                    placeholder="buddy@email.com"
+                    className="flex-1 bg-bg-input border border-border rounded px-3 py-2 text-text font-mono text-sm focus:border-accent focus:outline-none transition-colors"
+                  />
+                  <button
+                    onClick={() => {
+                      if (!buddyEmail.trim()) return;
+                      // Save buddy email locally
+                      localStorage.setItem("justwrite_buddy_email", buddyEmail.trim());
+                      setBuddySaved(true);
+                      // Share via email
+                      const subject = encodeURIComponent(`I just wrote ${stats?.netWords ?? 0} words!`);
+                      const body = encodeURIComponent(
+                        `Hey! I just finished a ${stats?.durationMinutes ?? 0}-minute writing session on JustWrite.\n\n` +
+                        `Words written: +${stats?.wordsAdded ?? 0}\n` +
+                        `Net words: ${stats?.netWords ?? 0}\n` +
+                        `Words per minute: ${stats?.wordsPerMinute ?? 0}\n\n` +
+                        `Join me! https://justwrite.app`
+                      );
+                      window.open(`mailto:${buddyEmail.trim()}?subject=${subject}&body=${body}`, "_blank");
+                    }}
+                    disabled={!buddyEmail.trim()}
+                    className="bg-accent text-white px-4 py-2 rounded font-mono text-sm hover:bg-accent-hover transition-colors disabled:opacity-40"
+                  >
+                    {buddySaved ? "Sent!" : "Share"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Push notifications */}
+              <div className="border-t border-border pt-4">
+                <h3 className="font-mono text-xs text-text-dim mb-3 uppercase tracking-wider">Push Notifications</h3>
+                {pushEnabled ? (
+                  <p className="text-success font-mono text-xs">Notifications enabled. You&apos;ll be reminded at your scheduled time.</p>
+                ) : (
+                  <div>
+                    <p className="text-text-dim text-xs mb-3 leading-relaxed">
+                      Get a browser notification when it&apos;s time to write.
+                    </p>
+                    <button
+                      onClick={requestPushPermission}
+                      className="w-full border border-border py-2.5 rounded font-mono text-xs text-text-muted hover:border-accent hover:text-accent transition-colors"
+                    >
+                      Enable Push Notifications
+                    </button>
+                    {pushError && <p className="text-danger text-xs font-mono mt-2">{pushError}</p>}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <div className="opacity-30 blur-[1px] pointer-events-none select-none mb-4">
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="border border-border rounded-lg px-4 py-3 font-mono text-xs text-text-dim">Export to Google Docs</div>
+                  <div className="border border-border rounded-lg px-4 py-3 font-mono text-xs text-text-dim">Copy for Notion</div>
+                </div>
+                <div className="border border-border rounded-lg px-4 py-3 font-mono text-xs text-text-dim">Writing Buddy & Push Notifications</div>
+              </div>
+              <Link href="/#pricing" className="text-accent hover:underline font-mono text-sm">
+                Upgrade for Export & Sharing Tools
+              </Link>
+            </div>
+          )}
+        </div>
 
         {/* Action buttons */}
         <div className="flex flex-col gap-4">

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 // ============================================================
 // CONFIGURATION: Change the email address below to receive
@@ -6,8 +7,26 @@ import { NextRequest, NextResponse } from "next/server";
 // ============================================================
 const SUPPORT_EMAIL = "support@justwrite.app";
 
+// Rate limit: 5 support messages per 15 minutes per IP
+const RATE_LIMIT = { windowMs: 15 * 60 * 1000, maxRequests: 5 };
+
 export async function POST(req: NextRequest) {
   try {
+    // Rate limiting
+    const ip = getClientIp(req);
+    const rl = checkRateLimit(`support:${ip}`, RATE_LIMIT);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(Math.ceil((rl.resetAt - Date.now()) / 1000)),
+          },
+        }
+      );
+    }
+
     const { name, email, message } = await req.json();
 
     if (!name?.trim() || !email?.trim() || !message?.trim()) {

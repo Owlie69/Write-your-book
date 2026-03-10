@@ -36,6 +36,8 @@ export default function DashboardPage() {
   const [showNewFile, setShowNewFile] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
 
   const loadFiles = useCallback(async () => {
     const local = getLocalFiles();
@@ -72,6 +74,14 @@ export default function DashboardPage() {
 
   const maxFiles = plan === "free" ? FREE_MAX_FILES : Infinity;
   const canCreate = files.length < maxFiles;
+
+  // Filter files by search query
+  const filteredFiles = searchQuery.trim()
+    ? files.filter((f) => {
+        const q = searchQuery.toLowerCase();
+        return f.title.toLowerCase().includes(q) || f.content.toLowerCase().includes(q);
+      })
+    : files;
 
   return (
     <div className="min-h-screen bg-bg paper-texture">
@@ -125,8 +135,8 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        {/* New file button */}
-        <div className="text-center mb-10 sm:mb-16">
+        {/* New file button + search */}
+        <div className="flex items-center justify-center gap-3 mb-10 sm:mb-16">
           {canCreate ? (
             <button
               onClick={() => setShowNewFile(true)}
@@ -142,7 +152,47 @@ export default function DashboardPage() {
               Upgrade for More Files
             </Link>
           )}
+          {files.length > 0 && (
+            plan !== "free" ? (
+              <button
+                onClick={() => setShowSearch(!showSearch)}
+                className={`border px-4 py-3 rounded font-mono text-sm transition-colors ${
+                  showSearch ? "border-accent text-accent" : "border-border text-text-dim hover:border-accent hover:text-accent"
+                }`}
+                title="Search files"
+              >
+                &#128269;
+              </button>
+            ) : (
+              <button
+                className="border border-border px-4 py-3 rounded font-mono text-sm text-text-dim opacity-40 cursor-not-allowed"
+                title="Upgrade for file search"
+                disabled
+              >
+                &#128269;
+              </button>
+            )
+          )}
         </div>
+
+        {/* Search bar */}
+        {showSearch && plan !== "free" && (
+          <div className="mb-8 fade-in">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search titles and content..."
+              className="w-full bg-bg-input border border-border rounded-lg px-5 py-3.5 text-text font-mono text-sm focus:border-accent focus:outline-none transition-colors"
+              autoFocus
+            />
+            {searchQuery && (
+              <p className="text-text-dim text-xs font-mono mt-2 text-center">
+                {filteredFiles.length} result{filteredFiles.length !== 1 ? "s" : ""}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* New file modal */}
         {showNewFile && (
@@ -196,7 +246,7 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="space-y-6">
-            {files.map((file) => {
+            {filteredFiles.map((file) => {
               const pageCount = calculatePageCount(file.content);
               const maxPages = plan === "free" ? FREE_MAX_PAGES : Infinity;
               const updated = new Date(file.updatedAt);

@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+
+// Rate limit: 10 reminder requests per 15 minutes per IP
+const RATE_LIMIT = { windowMs: 15 * 60 * 1000, maxRequests: 10 };
 
 function getSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -17,6 +21,21 @@ function getSupabaseAdmin() {
 // POST — Schedule a new reminder
 export async function POST(req: NextRequest) {
   try {
+    // Rate limiting
+    const ip = getClientIp(req);
+    const rl = checkRateLimit(`reminder:${ip}`, RATE_LIMIT);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(Math.ceil((rl.resetAt - Date.now()) / 1000)),
+          },
+        }
+      );
+    }
+
     const { email, userId, fileId, fileTitle, sessionDate, sessionTime } =
       await req.json();
 
