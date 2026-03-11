@@ -22,7 +22,9 @@ export default function SignInPage() {
     setLoading(true);
 
     const err = await signIn(email, password);
-    if (err) {
+    if (err === "VERIFY_DEVICE") {
+      router.push("/auth/verify-device");
+    } else if (err) {
       setError(err);
       setLoading(false);
     } else {
@@ -78,6 +80,15 @@ export default function SignInPage() {
                 required
                 disabled={!configured}
               />
+            </div>
+
+            <div className="text-right">
+              <Link
+                href="/auth/forgot-password"
+                className="text-xs font-mono text-accent hover:underline"
+              >
+                Forgot password?
+              </Link>
             </div>
 
             {error && (

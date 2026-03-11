@@ -10,7 +10,13 @@ import {
 import { supabase, isSupabaseConfigured } from "./supabase";
 import type { User } from "@supabase/supabase-js";
 import type { PlanType } from "./constants";
+import {
+  getDeviceFingerprint,
+  isKnownDevice,
+  addKnownDevice,
+} from "./device-fingerprint";
 
+// Return type for signIn: null = success, string = error, "VERIFY_DEVICE" = needs OTP
 interface AuthState {
   user: User | null;
   plan: PlanType;
@@ -18,6 +24,7 @@ interface AuthState {
   signIn: (email: string, password: string) => Promise<string | null>;
   signUp: (email: string, password: string) => Promise<string | null>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<string | null>;
 }
 
 const AuthContext = createContext<AuthState>({
@@ -27,6 +34,7 @@ const AuthContext = createContext<AuthState>({
   signIn: async () => null,
   signUp: async () => null,
   signOut: async () => {},
+  resetPassword: async () => null,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -77,11 +85,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     password: string
   ): Promise<string | null> {
     if (!isSupabaseConfigured()) return "Supabase is not configured";
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-    return error?.message ?? null;
+    if (error) return error.message;
+
+    // Check if this is a known device
+    const userId = data.user?.id;
+    if (userId && !isKnownDevice(userId)) {
+      // New device — sign out and send OTP for verification
+      await supabase.auth.signOut();
+
+      // Send OTP email
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email,
+        options: { shouldCreateUser: false },
+      });
+
+      if (otpError) return otpError.message;
+
+      // Store pending verification in sessionStorage
+      sessionStorage.setItem(
+        "justwrite_pending_verify",
+        JSON.stringify({ email, userId })
+      );
+
+      return "VERIFY_DEVICE";
+    }
+
+    // Known device — mark it (in case fingerprint drifted slightly)
+    if (userId) {
+      addKnownDevice(userId, getDeviceFingerprint());
+    }
+
+    return null;
   }
 
   async function signUp(
@@ -93,6 +131,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return error?.message ?? null;
   }
 
+  async function resetPassword(email: string): Promise<string | null> {
+    if (!isSupabaseConfigured()) return "Supabase is not configured";
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/auth/reset-password`,
+    });
+    return error?.message ?? null;
+  }
+
   async function signOut() {
     if (!isSupabaseConfigured()) return;
     await supabase.auth.signOut();
@@ -101,7 +147,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, plan, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider
+      value={{ user, plan, loading, signIn, signUp, signOut, resetPassword }}
+    >
       {children}
     </AuthContext.Provider>
   );
