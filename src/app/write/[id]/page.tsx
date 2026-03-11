@@ -280,189 +280,623 @@ const AMBIENT_SOUNDS = [
 
 type AmbientSoundId = typeof AMBIENT_SOUNDS[number]["id"];
 
+// Helper: create a noise buffer
+function createNoiseBuffer(audioCtx: AudioContext, seconds: number): AudioBuffer {
+  const len = audioCtx.sampleRate * seconds;
+  const buffer = audioCtx.createBuffer(2, len, audioCtx.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const data = buffer.getChannelData(ch);
+    for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+  }
+  return buffer;
+}
+
 // Generate ambient sound using Web Audio API (no external files needed)
 function createAmbientSound(audioCtx: AudioContext, soundId: AmbientSoundId): { start: () => void; stop: () => void } {
   let nodes: AudioNode[] = [];
+  let sources: AudioBufferSourceNode[] = [];
+  let oscillators: OscillatorNode[] = [];
   let running = false;
 
   function start() {
     if (running) return;
     running = true;
 
-    const gainNode = audioCtx.createGain();
-    gainNode.gain.value = 0.15;
-    gainNode.connect(audioCtx.destination);
+    const master = audioCtx.createGain();
+    master.gain.value = 0.18;
+    master.connect(audioCtx.destination);
+    nodes.push(master);
 
     if (soundId === "whitenoise") {
-      // White noise via buffer
-      const bufferSize = audioCtx.sampleRate * 2;
-      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-      const source = audioCtx.createBufferSource();
-      source.buffer = buffer;
-      source.loop = true;
-      const filter = audioCtx.createBiquadFilter();
-      filter.type = "lowpass";
-      filter.frequency.value = 3000;
-      source.connect(filter);
-      filter.connect(gainNode);
-      source.start();
-      nodes = [source, filter, gainNode];
-    } else if (soundId === "rain") {
-      // Rain: filtered noise with modulation
-      const bufferSize = audioCtx.sampleRate * 2;
-      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-      const source = audioCtx.createBufferSource();
-      source.buffer = buffer;
-      source.loop = true;
-      const bp = audioCtx.createBiquadFilter();
-      bp.type = "bandpass";
-      bp.frequency.value = 800;
-      bp.Q.value = 0.5;
-      source.connect(bp);
-      bp.connect(gainNode);
-      source.start();
-      nodes = [source, bp, gainNode];
-    } else if (soundId === "cafe") {
-      // Cafe: low rumble noise
-      const bufferSize = audioCtx.sampleRate * 2;
-      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-      const source = audioCtx.createBufferSource();
-      source.buffer = buffer;
-      source.loop = true;
+      // Smooth pink-ish white noise — gentle and non-harsh
+      const buf = createNoiseBuffer(audioCtx, 4);
+      const src = audioCtx.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      sources.push(src);
+
+      // Shape it to be softer: roll off highs, slight warmth
       const lp = audioCtx.createBiquadFilter();
       lp.type = "lowpass";
-      lp.frequency.value = 400;
+      lp.frequency.value = 4000;
+      lp.Q.value = 0.5;
+      nodes.push(lp);
+
       const hp = audioCtx.createBiquadFilter();
       hp.type = "highpass";
-      hp.frequency.value = 80;
-      source.connect(lp);
-      lp.connect(hp);
-      hp.connect(gainNode);
-      source.start();
-      nodes = [source, lp, hp, gainNode];
+      hp.frequency.value = 100;
+      nodes.push(hp);
+
+      src.connect(hp);
+      hp.connect(lp);
+      lp.connect(master);
+      master.gain.value = 0.12;
+      src.start();
+
+    } else if (soundId === "rain") {
+      // Rain: two noise layers — steady patter + heavier drops
+      // Layer 1: steady light rain (higher pitched, filtered)
+      const buf1 = createNoiseBuffer(audioCtx, 4);
+      const src1 = audioCtx.createBufferSource();
+      src1.buffer = buf1;
+      src1.loop = true;
+      sources.push(src1);
+
+      const bp1 = audioCtx.createBiquadFilter();
+      bp1.type = "bandpass";
+      bp1.frequency.value = 3000;
+      bp1.Q.value = 0.4;
+      nodes.push(bp1);
+
+      const gain1 = audioCtx.createGain();
+      gain1.gain.value = 0.3;
+      nodes.push(gain1);
+
+      src1.connect(bp1);
+      bp1.connect(gain1);
+      gain1.connect(master);
+      src1.start();
+
+      // Layer 2: heavier drops (lower, with slow amplitude modulation)
+      const buf2 = createNoiseBuffer(audioCtx, 6);
+      const src2 = audioCtx.createBufferSource();
+      src2.buffer = buf2;
+      src2.loop = true;
+      sources.push(src2);
+
+      const bp2 = audioCtx.createBiquadFilter();
+      bp2.type = "bandpass";
+      bp2.frequency.value = 800;
+      bp2.Q.value = 0.6;
+      nodes.push(bp2);
+
+      // Modulate amplitude slowly to simulate rain intensity
+      const modGain = audioCtx.createGain();
+      modGain.gain.value = 0.5;
+      nodes.push(modGain);
+
+      const lfo = audioCtx.createOscillator();
+      lfo.type = "sine";
+      lfo.frequency.value = 0.15; // slow wobble
+      oscillators.push(lfo);
+
+      const lfoGain = audioCtx.createGain();
+      lfoGain.gain.value = 0.2;
+      nodes.push(lfoGain);
+
+      lfo.connect(lfoGain);
+      lfoGain.connect(modGain.gain);
+
+      src2.connect(bp2);
+      bp2.connect(modGain);
+      modGain.connect(master);
+      src2.start();
+      lfo.start();
+
+      // Layer 3: subtle low rumble (distant thunder ambience)
+      const buf3 = createNoiseBuffer(audioCtx, 8);
+      const src3 = audioCtx.createBufferSource();
+      src3.buffer = buf3;
+      src3.loop = true;
+      sources.push(src3);
+
+      const lp3 = audioCtx.createBiquadFilter();
+      lp3.type = "lowpass";
+      lp3.frequency.value = 200;
+      nodes.push(lp3);
+
+      const gain3 = audioCtx.createGain();
+      gain3.gain.value = 0.15;
+      nodes.push(gain3);
+
+      src3.connect(lp3);
+      lp3.connect(gain3);
+      gain3.connect(master);
+      src3.start();
+
+    } else if (soundId === "cafe") {
+      // Cafe: warm low murmur + mid chatter hum + occasional clinking highs
+      // Base murmur
+      const buf1 = createNoiseBuffer(audioCtx, 6);
+      const src1 = audioCtx.createBufferSource();
+      src1.buffer = buf1;
+      src1.loop = true;
+      sources.push(src1);
+
+      const lp1 = audioCtx.createBiquadFilter();
+      lp1.type = "lowpass";
+      lp1.frequency.value = 350;
+      lp1.Q.value = 0.7;
+      nodes.push(lp1);
+
+      const hp1 = audioCtx.createBiquadFilter();
+      hp1.type = "highpass";
+      hp1.frequency.value = 60;
+      nodes.push(hp1);
+
+      const gain1 = audioCtx.createGain();
+      gain1.gain.value = 0.5;
+      nodes.push(gain1);
+
+      src1.connect(hp1);
+      hp1.connect(lp1);
+      lp1.connect(gain1);
+      gain1.connect(master);
+      src1.start();
+
+      // Mid chatter layer
+      const buf2 = createNoiseBuffer(audioCtx, 5);
+      const src2 = audioCtx.createBufferSource();
+      src2.buffer = buf2;
+      src2.loop = true;
+      sources.push(src2);
+
+      const bp2 = audioCtx.createBiquadFilter();
+      bp2.type = "bandpass";
+      bp2.frequency.value = 1200;
+      bp2.Q.value = 1.5;
+      nodes.push(bp2);
+
+      const gain2 = audioCtx.createGain();
+      gain2.gain.value = 0.12;
+      nodes.push(gain2);
+
+      // Slow modulation to simulate conversation ebb and flow
+      const lfo2 = audioCtx.createOscillator();
+      lfo2.type = "sine";
+      lfo2.frequency.value = 0.08;
+      oscillators.push(lfo2);
+
+      const lfoGain2 = audioCtx.createGain();
+      lfoGain2.gain.value = 0.06;
+      nodes.push(lfoGain2);
+
+      lfo2.connect(lfoGain2);
+      lfoGain2.connect(gain2.gain);
+
+      src2.connect(bp2);
+      bp2.connect(gain2);
+      gain2.connect(master);
+      src2.start();
+      lfo2.start();
+
+      // High sparkle layer (clinking, faint)
+      const buf3 = createNoiseBuffer(audioCtx, 3);
+      const src3 = audioCtx.createBufferSource();
+      src3.buffer = buf3;
+      src3.loop = true;
+      sources.push(src3);
+
+      const hp3 = audioCtx.createBiquadFilter();
+      hp3.type = "highpass";
+      hp3.frequency.value = 4000;
+      nodes.push(hp3);
+
+      const gain3 = audioCtx.createGain();
+      gain3.gain.value = 0.04;
+      nodes.push(gain3);
+
+      src3.connect(hp3);
+      hp3.connect(gain3);
+      gain3.connect(master);
+      src3.start();
+
     } else if (soundId === "fire") {
-      // Fire: crackling noise
-      const bufferSize = audioCtx.sampleRate * 2;
-      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) {
-        data[i] = (Math.random() * 2 - 1) * (Math.random() > 0.7 ? 1 : 0.2);
+      // Fireplace: crackling pops over a warm low rumble
+      // Warm base roar
+      const buf1 = createNoiseBuffer(audioCtx, 4);
+      const src1 = audioCtx.createBufferSource();
+      src1.buffer = buf1;
+      src1.loop = true;
+      sources.push(src1);
+
+      const lp1 = audioCtx.createBiquadFilter();
+      lp1.type = "lowpass";
+      lp1.frequency.value = 250;
+      lp1.Q.value = 0.8;
+      nodes.push(lp1);
+
+      const gain1 = audioCtx.createGain();
+      gain1.gain.value = 0.35;
+      nodes.push(gain1);
+
+      src1.connect(lp1);
+      lp1.connect(gain1);
+      gain1.connect(master);
+      src1.start();
+
+      // Crackle layer: noise with random amplitude bursts
+      const crackleLen = audioCtx.sampleRate * 6;
+      const crackleBuf = audioCtx.createBuffer(2, crackleLen, audioCtx.sampleRate);
+      for (let ch = 0; ch < 2; ch++) {
+        const data = crackleBuf.getChannelData(ch);
+        for (let i = 0; i < crackleLen; i++) {
+          // Random pops: short bursts of noise at random intervals
+          const pop = Math.random() < 0.003 ? 1.0 : Math.random() < 0.01 ? 0.4 : 0.0;
+          // Each pop lasts ~5-20 samples
+          if (pop > 0) {
+            const popLen = Math.floor(5 + Math.random() * 15);
+            for (let j = 0; j < popLen && i + j < crackleLen; j++) {
+              data[i + j] = (Math.random() * 2 - 1) * pop;
+            }
+            i += 15;
+          }
+        }
       }
-      const source = audioCtx.createBufferSource();
-      source.buffer = buffer;
-      source.loop = true;
-      const bp = audioCtx.createBiquadFilter();
-      bp.type = "bandpass";
-      bp.frequency.value = 500;
-      bp.Q.value = 1;
-      source.connect(bp);
-      bp.connect(gainNode);
-      source.start();
-      nodes = [source, bp, gainNode];
+      const src2 = audioCtx.createBufferSource();
+      src2.buffer = crackleBuf;
+      src2.loop = true;
+      sources.push(src2);
+
+      const bp2 = audioCtx.createBiquadFilter();
+      bp2.type = "bandpass";
+      bp2.frequency.value = 2000;
+      bp2.Q.value = 0.5;
+      nodes.push(bp2);
+
+      const gain2 = audioCtx.createGain();
+      gain2.gain.value = 0.6;
+      nodes.push(gain2);
+
+      src2.connect(bp2);
+      bp2.connect(gain2);
+      gain2.connect(master);
+      src2.start();
+
+      // Mid warmth hiss
+      const buf3 = createNoiseBuffer(audioCtx, 5);
+      const src3 = audioCtx.createBufferSource();
+      src3.buffer = buf3;
+      src3.loop = true;
+      sources.push(src3);
+
+      const bp3 = audioCtx.createBiquadFilter();
+      bp3.type = "bandpass";
+      bp3.frequency.value = 600;
+      bp3.Q.value = 1.2;
+      nodes.push(bp3);
+
+      const gain3 = audioCtx.createGain();
+      gain3.gain.value = 0.15;
+      nodes.push(gain3);
+
+      src3.connect(bp3);
+      bp3.connect(gain3);
+      gain3.connect(master);
+      src3.start();
+
     } else if (soundId === "forest") {
-      // Forest: high-pitched filtered noise
-      const bufferSize = audioCtx.sampleRate * 2;
-      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-      const source = audioCtx.createBufferSource();
-      source.buffer = buffer;
-      source.loop = true;
-      const bp = audioCtx.createBiquadFilter();
-      bp.type = "bandpass";
-      bp.frequency.value = 2000;
-      bp.Q.value = 0.3;
-      gainNode.gain.value = 0.08;
-      source.connect(bp);
-      bp.connect(gainNode);
-      source.start();
-      nodes = [source, bp, gainNode];
-    } else if (soundId === "waves") {
-      // Waves: low noise with slow modulation
-      const bufferSize = audioCtx.sampleRate * 4;
-      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) {
-        const t = i / audioCtx.sampleRate;
-        const wave = Math.sin(t * 0.3 * Math.PI * 2) * 0.5 + 0.5;
-        data[i] = (Math.random() * 2 - 1) * wave;
+      // Forest: gentle wind through trees + bird-like chirps + rustling
+      // Wind base layer
+      const buf1 = createNoiseBuffer(audioCtx, 8);
+      const src1 = audioCtx.createBufferSource();
+      src1.buffer = buf1;
+      src1.loop = true;
+      sources.push(src1);
+
+      const bp1 = audioCtx.createBiquadFilter();
+      bp1.type = "bandpass";
+      bp1.frequency.value = 400;
+      bp1.Q.value = 0.3;
+      nodes.push(bp1);
+
+      const windGain = audioCtx.createGain();
+      windGain.gain.value = 0.2;
+      nodes.push(windGain);
+
+      // Slow wind modulation
+      const windLfo = audioCtx.createOscillator();
+      windLfo.type = "sine";
+      windLfo.frequency.value = 0.06;
+      oscillators.push(windLfo);
+
+      const windLfoGain = audioCtx.createGain();
+      windLfoGain.gain.value = 0.1;
+      nodes.push(windLfoGain);
+
+      windLfo.connect(windLfoGain);
+      windLfoGain.connect(windGain.gain);
+
+      src1.connect(bp1);
+      bp1.connect(windGain);
+      windGain.connect(master);
+      src1.start();
+      windLfo.start();
+
+      // High rustling leaves
+      const buf2 = createNoiseBuffer(audioCtx, 5);
+      const src2 = audioCtx.createBufferSource();
+      src2.buffer = buf2;
+      src2.loop = true;
+      sources.push(src2);
+
+      const hp2 = audioCtx.createBiquadFilter();
+      hp2.type = "highpass";
+      hp2.frequency.value = 3000;
+      nodes.push(hp2);
+
+      const lp2 = audioCtx.createBiquadFilter();
+      lp2.type = "lowpass";
+      lp2.frequency.value = 7000;
+      nodes.push(lp2);
+
+      const gain2 = audioCtx.createGain();
+      gain2.gain.value = 0.06;
+      nodes.push(gain2);
+
+      src2.connect(hp2);
+      hp2.connect(lp2);
+      lp2.connect(gain2);
+      gain2.connect(master);
+      src2.start();
+
+      // Bird-like chirps: several sine oscillators with slow random-ish on/off
+      for (let b = 0; b < 3; b++) {
+        const birdOsc = audioCtx.createOscillator();
+        birdOsc.type = "sine";
+        birdOsc.frequency.value = 2800 + b * 600 + Math.random() * 400;
+        oscillators.push(birdOsc);
+
+        const birdGain = audioCtx.createGain();
+        birdGain.gain.value = 0;
+        nodes.push(birdGain);
+
+        // Modulate bird on/off with a slow square-ish LFO
+        const birdLfo = audioCtx.createOscillator();
+        birdLfo.type = "square";
+        birdLfo.frequency.value = 0.3 + Math.random() * 0.4;
+        oscillators.push(birdLfo);
+
+        const birdLfoGain = audioCtx.createGain();
+        birdLfoGain.gain.value = 0.015;
+        nodes.push(birdLfoGain);
+
+        birdLfo.connect(birdLfoGain);
+        birdLfoGain.connect(birdGain.gain);
+
+        birdOsc.connect(birdGain);
+        birdGain.connect(master);
+        birdOsc.start();
+        birdLfo.start();
       }
-      const source = audioCtx.createBufferSource();
-      source.buffer = buffer;
-      source.loop = true;
+
+      master.gain.value = 0.2;
+
+    } else if (soundId === "waves") {
+      // Ocean waves: slow rhythmic surge with white noise shaped by LFO
+      const bufLen = audioCtx.sampleRate * 10;
+      const waveBuf = audioCtx.createBuffer(2, bufLen, audioCtx.sampleRate);
+      for (let ch = 0; ch < 2; ch++) {
+        const data = waveBuf.getChannelData(ch);
+        for (let i = 0; i < bufLen; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
+      }
+
+      const src = audioCtx.createBufferSource();
+      src.buffer = waveBuf;
+      src.loop = true;
+      sources.push(src);
+
+      // Low pass for the "whoosh"
       const lp = audioCtx.createBiquadFilter();
       lp.type = "lowpass";
-      lp.frequency.value = 600;
-      source.connect(lp);
-      lp.connect(gainNode);
-      source.start();
-      nodes = [source, lp, gainNode];
+      lp.frequency.value = 500;
+      lp.Q.value = 0.5;
+      nodes.push(lp);
+
+      // LFO to modulate volume = wave surging
+      const surgeLfo = audioCtx.createOscillator();
+      surgeLfo.type = "sine";
+      surgeLfo.frequency.value = 0.1; // ~10 second wave cycle
+      oscillators.push(surgeLfo);
+
+      const surgeGain = audioCtx.createGain();
+      surgeGain.gain.value = 0.5;
+      nodes.push(surgeGain);
+
+      const surgeAmp = audioCtx.createGain();
+      surgeAmp.gain.value = 0.08;
+      nodes.push(surgeAmp);
+
+      surgeLfo.connect(surgeAmp);
+      surgeAmp.connect(surgeGain.gain);
+
+      src.connect(lp);
+      lp.connect(surgeGain);
+      surgeGain.connect(master);
+      src.start();
+      surgeLfo.start();
+
+      // Higher foam/hiss layer that follows the surge
+      const foamBuf = createNoiseBuffer(audioCtx, 6);
+      const foamSrc = audioCtx.createBufferSource();
+      foamSrc.buffer = foamBuf;
+      foamSrc.loop = true;
+      sources.push(foamSrc);
+
+      const foamBp = audioCtx.createBiquadFilter();
+      foamBp.type = "bandpass";
+      foamBp.frequency.value = 2500;
+      foamBp.Q.value = 0.4;
+      nodes.push(foamBp);
+
+      const foamGain = audioCtx.createGain();
+      foamGain.gain.value = 0.3;
+      nodes.push(foamGain);
+
+      const foamAmp = audioCtx.createGain();
+      foamAmp.gain.value = 0.06;
+      nodes.push(foamAmp);
+
+      // Same LFO but slightly offset
+      const foamLfo = audioCtx.createOscillator();
+      foamLfo.type = "sine";
+      foamLfo.frequency.value = 0.1;
+      oscillators.push(foamLfo);
+
+      foamLfo.connect(foamAmp);
+      foamAmp.connect(foamGain.gain);
+
+      foamSrc.connect(foamBp);
+      foamBp.connect(foamGain);
+      foamGain.connect(master);
+      foamSrc.start();
+      foamLfo.start();
+
+      // Distant deep rumble
+      const rumbleBuf = createNoiseBuffer(audioCtx, 8);
+      const rumbleSrc = audioCtx.createBufferSource();
+      rumbleSrc.buffer = rumbleBuf;
+      rumbleSrc.loop = true;
+      sources.push(rumbleSrc);
+
+      const rumbleLp = audioCtx.createBiquadFilter();
+      rumbleLp.type = "lowpass";
+      rumbleLp.frequency.value = 120;
+      nodes.push(rumbleLp);
+
+      const rumbleGain = audioCtx.createGain();
+      rumbleGain.gain.value = 0.25;
+      nodes.push(rumbleGain);
+
+      rumbleSrc.connect(rumbleLp);
+      rumbleLp.connect(rumbleGain);
+      rumbleGain.connect(master);
+      rumbleSrc.start();
     }
   }
 
   function stop() {
     running = false;
+    for (const osc of oscillators) {
+      try { osc.stop(); osc.disconnect(); } catch { /* ignore */ }
+    }
+    for (const src of sources) {
+      try { src.stop(); src.disconnect(); } catch { /* ignore */ }
+    }
     for (const node of nodes) {
-      try {
-        if ("stop" in node && typeof (node as AudioBufferSourceNode).stop === "function") {
-          (node as AudioBufferSourceNode).stop();
-        }
-        node.disconnect();
-      } catch { /* ignore */ }
+      try { node.disconnect(); } catch { /* ignore */ }
     }
     nodes = [];
+    sources = [];
+    oscillators = [];
   }
 
   return { start, stop };
 }
 
-// SVG Progress Ring component for word count goal
-function ProgressRing({
-  progress,
+// SVG Timer Ring — unified for both timer progress and word goal
+function TimerRing({
+  timeProgress,
+  wordProgress,
+  isLowTime,
+  goalReached,
   size,
-  strokeWidth,
   children,
 }: {
-  progress: number;
+  timeProgress: number; // 0–1 how much time has elapsed
+  wordProgress?: number; // 0–1 how close to word goal (optional, paid only)
+  isLowTime: boolean;
+  goalReached: boolean;
   size: number;
-  strokeWidth: number;
   children: React.ReactNode;
 }) {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = radius * 2 * Math.PI;
-  const offset = circumference - Math.min(1, Math.max(0, progress)) * circumference;
+  const strokeWidth = size * 0.045;
+  const wordStrokeWidth = wordProgress !== undefined ? size * 0.03 : 0;
+  const gap = wordProgress !== undefined ? 6 : 0;
+  const outerRadius = (size - strokeWidth) / 2;
+  const innerRadius = wordProgress !== undefined ? outerRadius - strokeWidth / 2 - gap - wordStrokeWidth / 2 : 0;
+  const outerCircumference = outerRadius * 2 * Math.PI;
+  const innerCircumference = innerRadius * 2 * Math.PI;
+  const timeOffset = outerCircumference - Math.min(1, Math.max(0, timeProgress)) * outerCircumference;
+  const wordOffset = wordProgress !== undefined
+    ? innerCircumference - Math.min(1, Math.max(0, wordProgress)) * innerCircumference
+    : 0;
+
+  const timeColor = isLowTime
+    ? "var(--color-danger)"
+    : "var(--color-accent)";
+  const wordColor = goalReached
+    ? "var(--color-success)"
+    : "var(--color-accent-dim, var(--color-accent))";
 
   return (
     <div className="relative inline-flex items-center justify-center">
       <svg width={size} height={size} className="transform -rotate-90">
+        {/* Outer track (time) */}
         <circle
           cx={size / 2}
           cy={size / 2}
-          r={radius}
+          r={outerRadius}
           fill="none"
           stroke="var(--color-border)"
           strokeWidth={strokeWidth}
+          opacity={0.4}
         />
+        {/* Outer progress (time) */}
         <circle
           cx={size / 2}
           cy={size / 2}
-          r={radius}
+          r={outerRadius}
           fill="none"
-          stroke={progress >= 1 ? "var(--color-success)" : "var(--color-accent)"}
+          stroke={timeColor}
           strokeWidth={strokeWidth}
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
+          strokeDasharray={outerCircumference}
+          strokeDashoffset={timeOffset}
           strokeLinecap="round"
-          className="transition-all duration-500 ease-out"
+          className="transition-all duration-1000 ease-linear"
+          style={{ filter: isLowTime ? "drop-shadow(0 0 6px var(--color-danger))" : "none" }}
         />
+        {/* Inner track (word goal) — only for paid */}
+        {wordProgress !== undefined && (
+          <>
+            <circle
+              cx={size / 2}
+              cy={size / 2}
+              r={innerRadius}
+              fill="none"
+              stroke="var(--color-border)"
+              strokeWidth={wordStrokeWidth}
+              opacity={0.25}
+            />
+            <circle
+              cx={size / 2}
+              cy={size / 2}
+              r={innerRadius}
+              fill="none"
+              stroke={wordColor}
+              strokeWidth={wordStrokeWidth}
+              strokeDasharray={innerCircumference}
+              strokeDashoffset={wordOffset}
+              strokeLinecap="round"
+              className="transition-all duration-500 ease-out"
+              style={{ filter: goalReached ? "drop-shadow(0 0 4px var(--color-success))" : "none" }}
+            />
+          </>
+        )}
       </svg>
-      <div className="absolute inset-0 flex items-center justify-center">
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
         {children}
       </div>
     </div>
@@ -1138,20 +1572,25 @@ export default function WritePage() {
         )}
 
         {/* Top bar */}
-        <div className="relative flex items-center justify-between px-3 sm:px-8 py-3 border-b border-border/50">
+        <div className="relative flex items-center justify-between px-3 sm:px-8 py-2 border-b border-border/50">
           <span className="font-mono text-xs sm:text-sm text-text-dim truncate max-w-[100px] sm:max-w-none">{file.title}</span>
-          <div className="absolute left-1/2 -translate-x-1/2">
-            {plan !== "free" ? (
-              <ProgressRing progress={sessionWordCount / wordGoal} size={52} strokeWidth={3}>
-                <span className={`font-mono text-base sm:text-lg ${isLowTime ? "text-danger" : goalReached ? "text-success" : "text-accent"}`}>
-                  {formatTime(timeLeft)}
-                </span>
-              </ProgressRing>
-            ) : (
-              <span className={`font-mono text-lg sm:text-xl ${isLowTime ? "text-danger" : "text-accent"}`}>
+          <div className="absolute left-1/2 -translate-x-1/2 -bottom-[38px] sm:-bottom-[46px] z-[60]">
+            <TimerRing
+              timeProgress={progress}
+              wordProgress={plan !== "free" ? Math.min(1, sessionWordCount / wordGoal) : undefined}
+              isLowTime={isLowTime}
+              goalReached={goalReached}
+              size={76}
+            >
+              <span className={`font-mono text-lg sm:text-xl font-semibold tracking-tight ${isLowTime ? "text-danger" : goalReached ? "text-success" : "text-accent"}`}>
                 {formatTime(timeLeft)}
               </span>
-            )}
+              {plan !== "free" && (
+                <span className={`font-mono text-[9px] ${goalReached ? "text-success" : "text-text-dim"}`}>
+                  {sessionWordCount}/{wordGoal}
+                </span>
+              )}
+            </TimerRing>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
             <span className="text-xs font-mono text-text-dim hidden sm:inline">
