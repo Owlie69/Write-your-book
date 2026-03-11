@@ -11,7 +11,7 @@ export const CHARS_PER_PAGE = 3000;
 
 // Session defaults
 export const DEFAULT_SESSION_MINUTES = 20;
-export const MIN_SESSION_MINUTES = 5;
+export const MIN_SESSION_MINUTES = 1;
 export const MAX_SESSION_MINUTES = 180;
 
 // Plans
@@ -41,7 +41,7 @@ export const PLANS = {
     features: [
       "Unlimited files & pages",
       "Access from any device",
-      "Custom session timer (5–180 min)",
+      "Custom session timer (1–180 min)",
       "Word count goals with progress ring",
       "Ambient sounds (rain, cafe, fire...)",
       "Download as PDF, TXT, or Word",

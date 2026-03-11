@@ -2004,7 +2004,7 @@ export default function WritePage() {
               <div className="border-t border-border pt-4">
                 <h3 className="font-mono text-xs text-text-dim mb-3 uppercase tracking-wider">Writing Buddy</h3>
                 <p className="text-text-dim text-xs mb-3 leading-relaxed">
-                  Share your session results with a friend for accountability.
+                  Let a friend know you completed a session — for accountability. Your writing is never shared, only your stats.
                 </p>
                 <div className="flex gap-2">
                   <input
