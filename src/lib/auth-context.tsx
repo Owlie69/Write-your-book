@@ -10,14 +10,7 @@ import {
 import { supabase, isSupabaseConfigured } from "./supabase";
 import type { User } from "@supabase/supabase-js";
 import type { PlanType } from "./constants";
-import {
-  getDeviceFingerprint,
-  isKnownDevice,
-  addKnownDevice,
-} from "./device-fingerprint";
 import { clearAllUserData } from "./storage";
-
-// Return type for signIn: null = success, string = error, "VERIFY_DEVICE" = needs OTP
 interface AuthState {
   user: User | null;
   plan: PlanType;
@@ -86,40 +79,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     password: string
   ): Promise<string | null> {
     if (!isSupabaseConfigured()) return "Supabase is not configured";
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
     if (error) return error.message;
-
-    // Check if this is a known device
-    const userId = data.user?.id;
-    if (userId && !isKnownDevice(userId)) {
-      // New device — sign out and send OTP for verification
-      await supabase.auth.signOut();
-
-      // Send OTP email
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        email,
-        options: { shouldCreateUser: false },
-      });
-
-      if (otpError) return otpError.message;
-
-      // Store pending verification in sessionStorage
-      sessionStorage.setItem(
-        "justwrite_pending_verify",
-        JSON.stringify({ email, userId })
-      );
-
-      return "VERIFY_DEVICE";
-    }
-
-    // Known device — mark it (in case fingerprint drifted slightly)
-    if (userId) {
-      addKnownDevice(userId, getDeviceFingerprint());
-    }
-
     return null;
   }
 
