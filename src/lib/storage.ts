@@ -188,6 +188,28 @@ export function calculateStreak(sessions: SessionRecord[]): { current: number; l
   return { current, longest };
 }
 
+// ---- Clear all user data from localStorage on sign-out ----
+
+export function clearAllUserData(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(LOCAL_STORAGE_KEY);
+  localStorage.removeItem(LOCAL_SETTINGS_KEY);
+  localStorage.removeItem(HABIT_KEY);
+  localStorage.removeItem(SESSIONS_KEY);
+  localStorage.removeItem("justwrite_buddy_email");
+  localStorage.removeItem("justwrite_push_enabled");
+  // Remove all device fingerprint keys
+  const keysToRemove: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith("justwrite_known_devices_")) {
+      keysToRemove.push(key);
+    }
+  }
+  keysToRemove.forEach((key) => localStorage.removeItem(key));
+  sessionStorage.removeItem("justwrite_pending_verify");
+}
+
 // ---- Cloud Storage (Supabase) ----
 
 export async function getCloudFiles(userId: string): Promise<WritingFile[]> {

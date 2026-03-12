@@ -15,6 +15,7 @@ import {
   isKnownDevice,
   addKnownDevice,
 } from "./device-fingerprint";
+import { clearAllUserData } from "./storage";
 
 // Return type for signIn: null = success, string = error, "VERIFY_DEVICE" = needs OTP
 interface AuthState {
@@ -142,8 +143,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signOut() {
     if (!isSupabaseConfigured()) return;
     await supabase.auth.signOut();
+    clearAllUserData();
     setUser(null);
     setPlan("free");
+    // Hard redirect to home so stale data is never visible
+    if (typeof window !== "undefined") {
+      window.location.href = "/";
+    }
   }
 
   return (

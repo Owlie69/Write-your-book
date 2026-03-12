@@ -41,6 +41,10 @@ export async function POST(req: NextRequest) {
     const fromEmail = process.env.RESEND_FROM_EMAIL;
 
     if (resendKey && fromEmail && resendKey !== "your-resend-api-key") {
+      // Escape HTML to prevent XSS in email content
+      const esc = (s: string) =>
+        s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
       const res = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
@@ -50,15 +54,15 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({
           from: fromEmail,
           to: SUPPORT_EMAIL,
-          subject: `[JustWrite Support] Message from ${name}`,
+          subject: `[JustWrite Support] Message from ${esc(name)}`,
           reply_to: email,
           html: `
             <div style="font-family: 'Courier New', monospace; max-width: 600px; margin: 0 auto; padding: 32px; background: #f5f3f0; border-radius: 8px;">
               <h2 style="color: #c8a87c; margin-bottom: 24px;">New Support Message</h2>
-              <p><strong>From:</strong> ${name}</p>
-              <p><strong>Email:</strong> ${email}</p>
+              <p><strong>From:</strong> ${esc(name)}</p>
+              <p><strong>Email:</strong> ${esc(email)}</p>
               <hr style="border: none; border-top: 1px solid #d4ccc1; margin: 16px 0;" />
-              <p style="white-space: pre-wrap; line-height: 1.8;">${message}</p>
+              <p style="white-space: pre-wrap; line-height: 1.8;">${esc(message)}</p>
             </div>
           `,
         }),

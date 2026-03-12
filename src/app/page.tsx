@@ -111,7 +111,7 @@ function PricingCard({
         ))}
       </ul>
       <Link
-        href={type === "free" ? "/dashboard" : "/auth/signup"}
+        href="/dashboard"
         className={`block text-center py-3.5 px-6 rounded font-mono text-sm sm:text-base transition-colors ${
           popular
             ? "bg-accent text-white hover:bg-accent-hover"

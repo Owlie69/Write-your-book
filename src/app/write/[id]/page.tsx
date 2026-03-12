@@ -56,11 +56,22 @@ function downloadAsTxt(content: string, title: string) {
   URL.revokeObjectURL(url);
 }
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function downloadAsPdf(content: string, title: string) {
   // Generate a printable HTML document and trigger print-to-PDF
+  const safeTitle = escapeHtml(title);
+  const safeContent = escapeHtml(content);
   const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8">
-<title>${title}</title>
+<title>${safeTitle}</title>
 <style>
   body { font-family: Georgia, serif; font-size: 12pt; line-height: 1.8;
          margin: 72px; color: #1a1a1a; white-space: pre-wrap; word-wrap: break-word; }
@@ -68,9 +79,9 @@ function downloadAsPdf(content: string, title: string) {
   .meta { color: #999; font-size: 10pt; margin-bottom: 32px; }
   @page { margin: 1in; }
 </style></head><body>
-<h1>${title}</h1>
+<h1>${safeTitle}</h1>
 <div class="meta">${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</div>
-${content}</body></html>`;
+${safeContent}</body></html>`;
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const printWindow = window.open(url, "_blank");
