@@ -260,6 +260,91 @@
     transform: scale(0.94);
   }
 
+  /* ======== Handwriting canvas ======== */
+  .handwriting-panel {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+
+  .handwriting-toolbar {
+    background: var(--color-bg-card);
+    z-index: 10;
+  }
+
+  .handwriting-tool-btn {
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    color: var(--color-text-dim);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    min-width: 28px;
+    min-height: 28px;
+  }
+
+  .handwriting-tool-btn:hover {
+    color: var(--color-accent);
+    border-color: var(--color-border);
+  }
+
+  .handwriting-tool-btn.active {
+    color: var(--color-accent);
+    background: rgba(184, 134, 11, 0.1);
+    border-color: var(--color-accent);
+  }
+
+  .handwriting-color-btn {
+    padding: 3px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+
+  .handwriting-color-btn:hover,
+  .handwriting-color-btn.active {
+    border-color: var(--color-accent);
+    transform: scale(1.15);
+  }
+
+  .handwriting-action-btn {
+    padding: 5px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .handwriting-action-btn:hover {
+    color: var(--color-accent);
+    border-color: var(--color-accent);
+  }
+
+  .handwriting-action-btn.keep {
+    background: var(--color-accent);
+    color: var(--color-bg);
+    border-color: var(--color-accent);
+  }
+
+  .handwriting-action-btn.keep:hover {
+    opacity: 0.9;
+  }
+
+  .handwriting-action-btn:disabled,
+  .handwriting-action-btn.keep:disabled {
+    cursor: not-allowed;
+    opacity: 0.3;
+  }
+
   /* Theme toggle button */
   .theme-toggle {
     width: 40px;

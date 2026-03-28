@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
+import HandwritingCanvas from "@/components/HandwritingCanvas";
 import {
   getLocalFiles,
   saveLocalFiles,
@@ -952,6 +953,10 @@ export default function WritePage() {
   const [buddyEmail, setBuddyEmail] = useState("");
   const [buddySaved, setBuddySaved] = useState(false);
 
+  // Input mode: keyboard or handwriting (tablet/stylus)
+  const [inputMode, setInputMode] = useState<"keyboard" | "handwriting">("keyboard");
+  const [handwritingImages, setHandwritingImages] = useState<string[]>([]);
+
   // Push notifications
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushError, setPushError] = useState<string | null>(null);
@@ -1283,6 +1288,25 @@ export default function WritePage() {
     if (idx < 0 || idx >= pages.length) return;
     setCurrentPageIndex(idx);
     setTimeout(() => textareaRef.current?.focus(), 50);
+  }
+
+  // Handwriting: insert typed text into current page
+  function handleHandwritingInsertText(text: string) {
+    const newPages = [...pages];
+    const current = newPages[currentPageIndex] ?? "";
+    newPages[currentPageIndex] = current ? current + "\n" + text : text;
+    const fullContent = joinPages(newPages);
+    updateStats(fullContent);
+    contentRef.current = fullContent;
+    setPages(newPages);
+    // Switch back to keyboard so user sees the inserted text
+    setInputMode("keyboard");
+    setTimeout(() => textareaRef.current?.focus(), 100);
+  }
+
+  // Handwriting: keep as image
+  function handleHandwritingKeepDrawing(dataUrl: string) {
+    setHandwritingImages((prev) => [...prev, dataUrl]);
   }
 
   function toggleAmbientSound(soundId: AmbientSoundId) {
@@ -1642,6 +1666,18 @@ export default function WritePage() {
               </button>
             )}
             <button
+              onClick={() => setInputMode(inputMode === "keyboard" ? "handwriting" : "keyboard")}
+              className={`w-8 h-8 rounded text-sm transition-colors flex items-center justify-center ${
+                inputMode === "handwriting"
+                  ? "bg-accent/20 text-accent"
+                  : "text-text-dim hover:text-accent"
+              }`}
+              title={inputMode === "keyboard" ? "Switch to handwriting" : "Switch to keyboard"}
+              aria-label="Toggle handwriting mode"
+            >
+              &#9998;
+            </button>
+            <button
               onClick={toggleTheme}
               className="theme-toggle"
               style={{ width: 28, height: 28, fontSize: 13 }}
@@ -1682,17 +1718,51 @@ export default function WritePage() {
 
             {/* Current page — always centered */}
             <div className={`a4-page paper-page ${pageFlipAnim ? "page-flip-in" : ""}`}>
-              <textarea
-                ref={textareaRef}
-                value={pages[currentPageIndex] ?? ""}
-                onChange={handleContentChange}
-                placeholder={currentPageIndex === 0 ? "Start writing..." : ""}
-                className={`writing-area w-full bg-transparent text-text resize-none font-serif ${TEXT_SIZES[settings.textSize].class}`}
-                spellCheck
-                autoFocus
-              />
+              {inputMode === "keyboard" ? (
+                <textarea
+                  ref={textareaRef}
+                  value={pages[currentPageIndex] ?? ""}
+                  onChange={handleContentChange}
+                  placeholder={currentPageIndex === 0 ? "Start writing..." : ""}
+                  className={`writing-area w-full bg-transparent text-text resize-none font-serif ${TEXT_SIZES[settings.textSize].class}`}
+                  spellCheck
+                  autoFocus
+                />
+              ) : (
+                <HandwritingCanvas
+                  onInsertText={handleHandwritingInsertText}
+                  onKeepDrawing={handleHandwritingKeepDrawing}
+                  onClose={() => {
+                    setInputMode("keyboard");
+                    setTimeout(() => textareaRef.current?.focus(), 100);
+                  }}
+                  theme={theme}
+                />
+              )}
             </div>
           </div>
+
+          {/* Handwriting gallery — saved drawings for this page */}
+          {handwritingImages.length > 0 && (
+            <div className="flex flex-wrap justify-center gap-3 px-4 pb-4">
+              {handwritingImages.map((img, i) => (
+                <div key={i} className="relative group">
+                  <img
+                    src={img}
+                    alt={`Handwriting ${i + 1}`}
+                    className="h-24 sm:h-32 rounded border border-border shadow-sm"
+                  />
+                  <button
+                    onClick={() => setHandwritingImages((prev) => prev.filter((_, j) => j !== i))}
+                    className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-danger text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Remove"
+                  >
+                    &times;
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Ambient sound picker overlay */}
