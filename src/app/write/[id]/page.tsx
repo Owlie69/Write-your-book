@@ -217,13 +217,6 @@ interface SessionStats {
   wordsPerMinute: number;
 }
 
-const DISSUASIVE_MESSAGES = [
-  { title: "Wait, you were in the zone!", body: "Your best writing happens when you stay locked in. The timer is still running. Get back in there." },
-  { title: "Don't break the flow.", body: "Every great writer pushes through the urge to stop. You've got words left in you. Keep going." },
-  { title: "Your future self will thank you.", body: "Quitting now means starting over tomorrow with less momentum. Stay in the session." },
-  { title: "The resistance is lying to you.", body: "That voice telling you to stop? It's the same one that's kept your book unfinished. Ignore it. Write." },
-];
-
 // 3-step quit flow messages
 const QUIT_STEPS = [
   {
@@ -962,8 +955,6 @@ export default function WritePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [sessionStats, setSessionStats] = useState<SessionStats | null>(null);
-  const [showDissuasive, setShowDissuasive] = useState(false);
-  const [dissuasiveMsg, setDissuasiveMsg] = useState(DISSUASIVE_MESSAGES[0]);
   const [showDownload, setShowDownload] = useState(false);
 
   // 3-step quit flow
@@ -1136,14 +1127,12 @@ export default function WritePage() {
     };
   }, [editorState, finishSession]);
 
-  // Detect fullscreen exit
+  // Detect fullscreen exit — trigger 3-step quit flow
   useEffect(() => {
     if (editorState !== "writing") return;
     function handleFullscreenChange() {
       if (!document.fullscreenElement && editorState === "writing") {
-        const msg = DISSUASIVE_MESSAGES[Math.floor(Math.random() * DISSUASIVE_MESSAGES.length)];
-        setDissuasiveMsg(msg);
-        setShowDissuasive(true);
+        handleRequestQuit();
       }
     }
     document.addEventListener("fullscreenchange", handleFullscreenChange);
@@ -1159,7 +1148,12 @@ export default function WritePage() {
       return e.returnValue;
     }
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        // If not already in quit flow, trigger it
+        handleRequestQuit();
+      }
       if ((e.ctrlKey || e.metaKey) && e.key === "w") { e.preventDefault(); }
       if ((e.ctrlKey || e.metaKey) && e.key === "t") { e.preventDefault(); }
     }
@@ -1199,17 +1193,6 @@ export default function WritePage() {
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
   }
 
-  function handleGoBackToWriting() {
-    setShowDissuasive(false);
-    enterFullscreen();
-    setTimeout(() => textareaRef.current?.focus(), 100);
-  }
-
-  function handleContinueWithoutFullscreen() {
-    setShowDissuasive(false);
-    setTimeout(() => textareaRef.current?.focus(), 100);
-  }
-
   // 3-step quit flow
   function handleRequestQuit() {
     setQuitStep(0);
@@ -1222,6 +1205,7 @@ export default function WritePage() {
       clearInterval(quitTimerRef.current);
       quitTimerRef.current = null;
     }
+    enterFullscreen();
     setTimeout(() => textareaRef.current?.focus(), 100);
   }
 
@@ -1272,7 +1256,7 @@ export default function WritePage() {
     setSessionStats(null);
     setReminderSent(false);
     setReminderError(null);
-    setShowDissuasive(false);
+    setQuitStep(-1);
     setGoalReached(false);
     setEditorState("writing");
     enterFullscreen();
@@ -1650,34 +1634,6 @@ export default function WritePage() {
             content={contentRef.current}
             onClose={() => setShowDownload(false)}
           />
-        )}
-
-        {/* Dissuasive overlay */}
-        {showDissuasive && (
-          <div className="fixed inset-0 z-[100] dissuasive-overlay flex items-center justify-center px-6">
-            <div className="w-full max-w-md text-center fade-in">
-              <div className="text-accent text-5xl mb-8">&#9888;</div>
-              <h2 className="font-mono text-2xl mb-4">{dissuasiveMsg.title}</h2>
-              <p className="text-text-muted leading-relaxed mb-10">{dissuasiveMsg.body}</p>
-              <div className="space-y-4">
-                <button
-                  onClick={handleGoBackToWriting}
-                  className="w-full bg-accent text-white py-4 rounded font-mono text-lg hover:bg-accent-hover transition-colors pulse-glow"
-                >
-                  Go Back to Writing
-                </button>
-                <button
-                  onClick={handleContinueWithoutFullscreen}
-                  className="w-full border border-border py-3 rounded font-mono text-sm text-text-dim hover:text-text-muted transition-colors"
-                >
-                  Continue without fullscreen
-                </button>
-              </div>
-              <p className="text-text-dim text-xs mt-8 font-mono">
-                {formatTime(timeLeft)} remaining
-              </p>
-            </div>
-          </div>
         )}
 
         {/* 3-step quit overlay */}
