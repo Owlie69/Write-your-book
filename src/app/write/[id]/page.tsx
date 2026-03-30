@@ -224,6 +224,33 @@ const DISSUASIVE_MESSAGES = [
   { title: "The resistance is lying to you.", body: "That voice telling you to stop? It's the same one that's kept your book unfinished. Ignore it. Write." },
 ];
 
+// 3-step quit flow messages
+const QUIT_STEPS = [
+  {
+    icon: "\u26A0",
+    title: "Are you sure you want to quit?",
+    body: "You're in the middle of a writing session. Leaving now breaks your momentum. Real writers push through.",
+    confirmLabel: "I still want to leave",
+    cancelLabel: "You're right, keep writing",
+  },
+  {
+    icon: "\u{1F6D1}",
+    title: "Seriously — don't do this.",
+    body: "You sat down to write for a reason. Every session you abandon is a chapter that never gets finished. Your book needs you right now.",
+    confirmLabel: "I don't care, let me go",
+    cancelLabel: "Fine, I'll stay and write",
+  },
+  {
+    icon: "\u{1F480}",
+    title: "Last chance. No coming back.",
+    body: "If you leave now, this session is gone forever. The streak resets. The words you would've written vanish. You'll regret this tomorrow morning.",
+    confirmLabel: "End session permanently",
+    cancelLabel: "I changed my mind — keep going",
+  },
+];
+
+const QUIT_COUNTDOWN_SECONDS = 10;
+
 // 25 lines per A4 page
 const LINES_PER_PAGE = 25;
 
@@ -939,6 +966,11 @@ export default function WritePage() {
   const [dissuasiveMsg, setDissuasiveMsg] = useState(DISSUASIVE_MESSAGES[0]);
   const [showDownload, setShowDownload] = useState(false);
 
+  // 3-step quit flow
+  const [quitStep, setQuitStep] = useState(-1); // -1 = not quitting, 0/1/2 = step index
+  const [quitCountdown, setQuitCountdown] = useState(QUIT_COUNTDOWN_SECONDS);
+  const quitTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   // Word count goal
   const [wordGoal, setWordGoal] = useState(500);
   const [goalReached, setGoalReached] = useState(false);
@@ -1176,6 +1208,48 @@ export default function WritePage() {
   function handleContinueWithoutFullscreen() {
     setShowDissuasive(false);
     setTimeout(() => textareaRef.current?.focus(), 100);
+  }
+
+  // 3-step quit flow
+  function handleRequestQuit() {
+    setQuitStep(0);
+  }
+
+  function handleQuitCancel() {
+    setQuitStep(-1);
+    setQuitCountdown(QUIT_COUNTDOWN_SECONDS);
+    if (quitTimerRef.current) {
+      clearInterval(quitTimerRef.current);
+      quitTimerRef.current = null;
+    }
+    setTimeout(() => textareaRef.current?.focus(), 100);
+  }
+
+  function handleQuitNext() {
+    const nextStep = quitStep + 1;
+    if (nextStep >= QUIT_STEPS.length) {
+      // Final confirm — actually end
+      handleQuitCancel();
+      finishSession();
+      return;
+    }
+    setQuitStep(nextStep);
+
+    // Start countdown on the last step
+    if (nextStep === QUIT_STEPS.length - 1) {
+      setQuitCountdown(QUIT_COUNTDOWN_SECONDS);
+      if (quitTimerRef.current) clearInterval(quitTimerRef.current);
+      quitTimerRef.current = setInterval(() => {
+        setQuitCountdown((prev) => {
+          if (prev <= 1) {
+            if (quitTimerRef.current) clearInterval(quitTimerRef.current);
+            quitTimerRef.current = null;
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
   }
 
   function startSession() {
@@ -1606,6 +1680,73 @@ export default function WritePage() {
           </div>
         )}
 
+        {/* 3-step quit overlay */}
+        {quitStep >= 0 && (
+          <div className="fixed inset-0 z-[110] dissuasive-overlay flex items-center justify-center px-6">
+            <div className="w-full max-w-md text-center fade-in" key={quitStep}>
+              <div className="text-5xl sm:text-6xl mb-8">{QUIT_STEPS[quitStep].icon}</div>
+              <h2 className="font-mono text-xl sm:text-2xl mb-4">{QUIT_STEPS[quitStep].title}</h2>
+              <p className="text-text-muted leading-relaxed mb-10">{QUIT_STEPS[quitStep].body}</p>
+
+              {/* Step indicator */}
+              <div className="flex justify-center gap-2 mb-8">
+                {QUIT_STEPS.map((_, i) => (
+                  <div
+                    key={i}
+                    className={`w-2 h-2 rounded-full transition-colors ${
+                      i <= quitStep ? "bg-danger" : "bg-border"
+                    }`}
+                  />
+                ))}
+              </div>
+
+              <div className="space-y-4">
+                <button
+                  onClick={handleQuitCancel}
+                  className="w-full bg-accent text-white py-4 rounded font-mono text-base sm:text-lg hover:bg-accent-hover transition-colors pulse-glow"
+                >
+                  {QUIT_STEPS[quitStep].cancelLabel}
+                </button>
+                {quitStep === QUIT_STEPS.length - 1 ? (
+                  <button
+                    onClick={handleQuitNext}
+                    disabled={quitCountdown > 0}
+                    className="w-full border border-danger/50 py-3 rounded font-mono text-sm text-danger/60 transition-all relative overflow-hidden disabled:cursor-not-allowed"
+                  >
+                    {quitCountdown > 0 ? (
+                      <span className="flex items-center justify-center gap-3">
+                        <svg className="quit-spinner" width="16" height="16" viewBox="0 0 16 16">
+                          <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.25" />
+                          <circle
+                            cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeWidth="2"
+                            strokeDasharray={`${((QUIT_COUNTDOWN_SECONDS - quitCountdown) / QUIT_COUNTDOWN_SECONDS) * 37.7} 37.7`}
+                            strokeLinecap="round"
+                            transform="rotate(-90 8 8)"
+                          />
+                        </svg>
+                        Wait {quitCountdown}s...
+                      </span>
+                    ) : (
+                      <span className="text-danger">{QUIT_STEPS[quitStep].confirmLabel}</span>
+                    )}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleQuitNext}
+                    className="w-full border border-border py-3 rounded font-mono text-sm text-text-dim hover:text-danger hover:border-danger/50 transition-colors"
+                  >
+                    {QUIT_STEPS[quitStep].confirmLabel}
+                  </button>
+                )}
+              </div>
+
+              <p className="text-text-dim text-xs mt-8 font-mono">
+                {formatTime(timeLeft)} remaining in session
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Top bar */}
         <div className="relative flex items-center justify-between px-3 sm:px-8 py-2 border-b border-border/50">
           <span className="font-mono text-xs sm:text-sm text-text-dim truncate max-w-[100px] sm:max-w-none">{file.title}</span>
@@ -1851,7 +1992,16 @@ export default function WritePage() {
               &#8594;
             </button>
           </div>
-          <span>{wordCount} words &middot; {charCount.toLocaleString()} characters</span>
+          <div className="flex items-center gap-3">
+            <span className="hidden sm:inline">{wordCount} words &middot; {charCount.toLocaleString()} characters</span>
+            <button
+              onClick={handleRequestQuit}
+              className="px-2 py-1 rounded text-text-dim-extra hover:text-danger transition-colors"
+              title="End session early"
+            >
+              Quit
+            </button>
+          </div>
         </div>
       </div>
     );

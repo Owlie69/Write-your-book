@@ -421,6 +421,15 @@
   50% { box-shadow: 0 0 20px rgba(200, 168, 124, 0.4); }
 }
 
+@keyframes quitSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.quit-spinner {
+  animation: quitSpin 1.5s linear infinite;
+}
+
 @keyframes pageFlipIn {
   0% {
     transform: perspective(1200px) rotateY(-90deg);
