@@ -218,7 +218,7 @@ interface SessionStats {
 }
 
 const DISSUASIVE_MESSAGES = [
-  { title: "Wait — you were in the zone!", body: "Your best writing happens when you stay locked in. The timer is still running. Get back in there." },
+  { title: "Wait, you were in the zone!", body: "Your best writing happens when you stay locked in. The timer is still running. Get back in there." },
   { title: "Don't break the flow.", body: "Every great writer pushes through the urge to stop. You've got words left in you. Keep going." },
   { title: "Your future self will thank you.", body: "Quitting now means starting over tomorrow with less momentum. Stay in the session." },
   { title: "The resistance is lying to you.", body: "That voice telling you to stop? It's the same one that's kept your book unfinished. Ignore it. Write." },
@@ -235,7 +235,7 @@ const QUIT_STEPS = [
   },
   {
     icon: "\u{1F6D1}",
-    title: "Seriously — don't do this.",
+    title: "Seriously, don't do this.",
     body: "You sat down to write for a reason. Every session you abandon is a chapter that never gets finished. Your book needs you right now.",
     confirmLabel: "I don't care, let me go",
     cancelLabel: "Fine, I'll stay and write",
@@ -245,7 +245,7 @@ const QUIT_STEPS = [
     title: "Last chance. No coming back.",
     body: "If you leave now, this session is gone forever. The streak resets. The words you would've written vanish. You'll regret this tomorrow morning.",
     confirmLabel: "End session permanently",
-    cancelLabel: "I changed my mind — keep going",
+    cancelLabel: "I changed my mind, keep going",
   },
 ];
 

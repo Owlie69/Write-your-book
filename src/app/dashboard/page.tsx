@@ -86,7 +86,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-bg paper-texture">
       {/* Nav */}
-      <nav className="flex items-center justify-between px-4 sm:px-8 py-5 sm:py-7 max-w-4xl mx-auto">
+      <nav className="flex items-center justify-between px-4 sm:px-8 py-5 sm:py-7 max-w-5xl mx-auto">
         <Link href="/" className="font-mono text-xl sm:text-2xl tracking-tight">
           <span className="text-accent">Just</span>Write
         </Link>
@@ -124,8 +124,8 @@ export default function DashboardPage() {
         </div>
       </nav>
 
-      {/* Content — centered, narrow, breathable */}
-      <div className="px-4 sm:px-8 py-10 sm:py-16 max-w-3xl mx-auto">
+      {/* Content — centered, wide enough for grid */}
+      <div className="px-4 sm:px-8 py-10 sm:py-16 max-w-5xl mx-auto">
         <div className="text-center mb-10 sm:mb-16">
           <h1 className="font-mono text-2xl sm:text-4xl mb-3">Your Writing</h1>
           <p className="text-text-muted text-sm sm:text-base">
@@ -135,25 +135,10 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        {/* New file button + search */}
-        <div className="flex items-center justify-center gap-3 mb-10 sm:mb-16">
-          {canCreate ? (
-            <button
-              onClick={() => setShowNewFile(true)}
-              className="bg-accent text-white px-8 py-3 rounded font-mono text-sm hover:bg-accent-hover transition-colors"
-            >
-              + New File
-            </button>
-          ) : (
-            <Link
-              href="/#pricing"
-              className="inline-block border border-accent text-accent px-8 py-3 rounded font-mono text-sm hover:bg-accent hover:text-white transition-colors"
-            >
-              Upgrade for More Files
-            </Link>
-          )}
-          {files.length > 0 && (
-            plan !== "free" ? (
+        {/* Search */}
+        {files.length > 0 && (
+          <div className="flex justify-center mb-8 sm:mb-12">
+            {plan !== "free" ? (
               <button
                 onClick={() => setShowSearch(!showSearch)}
                 className={`border px-4 py-3 rounded font-mono text-sm transition-colors ${
@@ -161,7 +146,7 @@ export default function DashboardPage() {
                 }`}
                 title="Search files"
               >
-                &#128269;
+                &#128269; Search
               </button>
             ) : (
               <button
@@ -169,11 +154,11 @@ export default function DashboardPage() {
                 title="Upgrade for file search"
                 disabled
               >
-                &#128269;
+                &#128269; Search
               </button>
-            )
-          )}
-        </div>
+            )}
+          </div>
+        )}
 
         {/* Search bar */}
         {showSearch && plan !== "free" && (
@@ -228,105 +213,113 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Files list */}
-        {files.length === 0 ? (
-          <div className="text-center py-16 sm:py-24">
-            <div className="text-text-dim text-5xl sm:text-6xl mb-6 sm:mb-8 font-serif">&ldquo;&rdquo;</div>
-            <h2 className="font-mono text-lg sm:text-xl mb-4">No files yet</h2>
-            <p className="text-text-muted mb-8 leading-relaxed">
-              Create your first writing file and start<br />
-              putting words on the page.
-            </p>
+        {/* Files grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+          {/* New file card */}
+          {canCreate ? (
             <button
               onClick={() => setShowNewFile(true)}
-              className="bg-accent text-white px-8 py-3 rounded font-mono text-sm hover:bg-accent-hover transition-colors"
+              className="border-2 border-dashed border-border rounded-xl p-5 sm:p-6 bg-bg-card hover:border-accent hover:bg-bg-card-hover transition-all flex flex-col items-center justify-center min-h-[200px] sm:min-h-[240px] group cursor-pointer"
             >
-              Create Your First File
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 border-border group-hover:border-accent group-hover:text-accent flex items-center justify-center text-2xl sm:text-3xl text-text-dim transition-colors mb-4">
+                +
+              </div>
+              <span className="font-mono text-sm text-text-dim group-hover:text-accent transition-colors">
+                New File
+              </span>
             </button>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {filteredFiles.map((file) => {
-              const pageCount = calculatePageCount(file.content);
-              const maxPages = plan === "free" ? FREE_MAX_PAGES : Infinity;
-              const updated = new Date(file.updatedAt);
-              const timeAgo = getTimeAgo(updated);
+          ) : (
+            <Link
+              href="/#pricing"
+              className="border-2 border-dashed border-border rounded-xl p-5 sm:p-6 bg-bg-card hover:border-accent transition-all flex flex-col items-center justify-center min-h-[200px] sm:min-h-[240px] group cursor-pointer"
+            >
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 border-border flex items-center justify-center text-text-dim transition-colors mb-4">
+                +
+              </div>
+              <span className="font-mono text-xs text-text-dim group-hover:text-accent transition-colors text-center">
+                Upgrade for<br />More Files
+              </span>
+            </Link>
+          )}
 
-              return (
+          {/* File cards */}
+          {filteredFiles.map((file) => {
+            const pageCount = calculatePageCount(file.content);
+            const maxPages = plan === "free" ? FREE_MAX_PAGES : Infinity;
+            const wordCount = file.content.split(/\s+/).filter(Boolean).length;
+            const updated = new Date(file.updatedAt);
+            const timeAgo = getTimeAgo(updated);
+
+            return (
+              <div key={file.id} className="relative group">
                 <Link
-                  key={file.id}
                   href={`/write/${file.id}`}
-                  className="block border border-border rounded-xl p-6 sm:p-10 bg-bg-card card-elevated hover:bg-bg-card-hover hover:border-accent/40 transition-colors group text-center cursor-pointer"
+                  className="block border border-border rounded-xl p-5 sm:p-6 bg-bg-card card-elevated hover:border-accent/40 hover:bg-bg-card-hover transition-colors min-h-[200px] sm:min-h-[240px] flex flex-col"
                 >
-                  <h3 className="font-mono text-xl sm:text-2xl mb-2 sm:mb-3">{file.title}</h3>
-                  <div className="flex items-center justify-center gap-2 sm:gap-4 text-xs sm:text-sm text-text-muted mb-3 sm:mb-4 flex-wrap">
-                    <span>
-                      {pageCount}{plan === "free" ? ` / ${maxPages}` : ""} page{pageCount !== 1 ? "s" : ""}
-                    </span>
-                    <span>&middot;</span>
-                    <span>{file.content.split(/\s+/).filter(Boolean).length} words</span>
-                    <span>&middot;</span>
-                    <span>{timeAgo}</span>
-                  </div>
+                  <h3 className="font-mono text-sm sm:text-base mb-2 line-clamp-2 leading-snug">{file.title}</h3>
                   {file.content && (
-                    <p className="text-text-dim text-sm mb-6 line-clamp-2 max-w-lg mx-auto leading-relaxed">
-                      {file.content.substring(0, 200)}
-                      {file.content.length > 200 ? "..." : ""}
+                    <p className="text-text-dim text-xs leading-relaxed line-clamp-3 mb-3 flex-1">
+                      {file.content.substring(0, 120)}
+                      {file.content.length > 120 ? "..." : ""}
                     </p>
                   )}
-                  <div className="flex items-center justify-center gap-2 sm:gap-4 flex-wrap" onClick={(e) => e.preventDefault()}>
-                    <Link
-                      href={`/write/${file.id}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="bg-accent text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded font-mono text-xs sm:text-sm hover:bg-accent-hover transition-colors"
-                    >
-                      Open
-                    </Link>
-                    {plan !== "free" ? (
-                      <button
-                        onClick={(e) => { e.preventDefault(); downloadFile(file); }}
-                        className="border border-border px-4 py-2.5 rounded font-mono text-xs text-text-muted hover:border-accent hover:text-accent transition-colors"
-                        title="Download file"
-                      >
-                        Download
-                      </button>
-                    ) : (
-                      <button
-                        className="border border-border px-4 py-2.5 rounded font-mono text-xs text-text-dim cursor-not-allowed opacity-50"
-                        title="Upgrade to download files"
-                        disabled
-                        onClick={(e) => e.preventDefault()}
-                      >
-                        Download
-                      </button>
-                    )}
-                    {deleteConfirm === file.id ? (
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={(e) => { e.preventDefault(); handleDeleteFile(file.id); }}
-                          className="text-danger text-sm font-mono hover:underline"
-                        >
-                          Confirm
-                        </button>
-                        <button
-                          onClick={(e) => { e.preventDefault(); setDeleteConfirm(null); }}
-                          className="text-text-dim text-sm font-mono hover:underline"
-                        >
-                          Cancel
-                        </button>
+                  {!file.content && <div className="flex-1" />}
+                  <div className="mt-auto pt-3 border-t border-border/50">
+                    <div className="text-text-dim text-[10px] sm:text-xs font-mono space-y-0.5">
+                      <div className="flex justify-between">
+                        <span>{wordCount} words</span>
+                        <span>{pageCount}{plan === "free" ? `/${maxPages}` : ""} pg</span>
                       </div>
-                    ) : (
-                      <button
-                        onClick={(e) => { e.preventDefault(); setDeleteConfirm(file.id); }}
-                        className="text-text-dim hover:text-danger text-xs sm:text-sm font-mono transition-colors sm:opacity-0 sm:group-hover:opacity-100"
-                      >
-                        Delete
-                      </button>
-                    )}
+                      <div className="text-text-dim-extra">{timeAgo}</div>
+                    </div>
                   </div>
                 </Link>
-              );
-            })}
+
+                {/* Action buttons overlay */}
+                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {plan !== "free" && (
+                    <button
+                      onClick={() => downloadFile(file)}
+                      className="w-7 h-7 rounded bg-bg-card border border-border text-text-dim hover:text-accent hover:border-accent flex items-center justify-center text-xs transition-colors"
+                      title="Download"
+                    >
+                      &#8615;
+                    </button>
+                  )}
+                  {deleteConfirm === file.id ? (
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => handleDeleteFile(file.id)}
+                        className="h-7 px-2 rounded bg-danger text-white text-[10px] font-mono"
+                      >
+                        Yes
+                      </button>
+                      <button
+                        onClick={() => setDeleteConfirm(null)}
+                        className="h-7 px-2 rounded bg-bg-card border border-border text-text-dim text-[10px] font-mono"
+                      >
+                        No
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setDeleteConfirm(file.id)}
+                      className="w-7 h-7 rounded bg-bg-card border border-border text-text-dim hover:text-danger hover:border-danger flex items-center justify-center text-xs transition-colors"
+                      title="Delete"
+                    >
+                      &times;
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Empty state when no files and search is active */}
+        {filteredFiles.length === 0 && files.length > 0 && searchQuery && (
+          <div className="text-center py-12">
+            <p className="text-text-dim font-mono text-sm">No files match your search.</p>
           </div>
         )}
 
